@@ -17,11 +17,14 @@ on:
       - "appimage/**"
       - "flatpak/**"
 
+# The upstream job called .github/workflows/flutter-build.yml, which also builds
+# macOS, Linux, Android and signed update metadata. Loading that reusable
+# workflow fails on this fork (startup_failure) because those jobs expect
+# upstream-only secrets and runners. Windows installers are published by
+# windows-release.yml instead.
 jobs:
-  run-ci:
-    # The full matrix needs upstream signing secrets and macOS/Android runners.
-    # This fork publishes Windows from windows-release.yml instead.
-    if: github.repository == 'rustdesk/rustdesk'
-    uses: ./.github/workflows/flutter-build.yml
-    with:
-      upload-artifact: false
+  skipped-on-fork:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upstream Flutter matrix is not run on this fork
+        run: echo "Use the Windows installer workflow (.github/workflows/windows-release.yml)."

@@ -9,12 +9,10 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+-[0-9]+'
       - '[0-9]+.[0-9]+.[0-9]+-[0-9]+'
 
+# Version tags used to call flutter-build.yml. That workflow cannot start on
+# this fork. wuxian-* tags are handled by windows-release.yml.
 jobs:
-  run-flutter-tag-build:
-    if: github.repository == 'rustdesk/rustdesk'
-    uses: ./.github/workflows/flutter-build.yml
-    secrets: inherit
-    with:
-      upload-artifact: true
-      upload-tag: ${{ github.ref_name }}
-      publish-update-metadata: ${{ github.repository == 'rustdesk/rustdesk' }}
+  skipped-on-fork:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Version-tag multi-platform build is disabled. Push a wuxian-* tag for the Windows installer."

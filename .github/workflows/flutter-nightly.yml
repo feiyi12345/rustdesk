@@ -2,15 +2,14 @@ name: Flutter Nightly Build
 
 on:
   schedule:
-    # schedule build every night
     - cron: "0 0 * * *"
   workflow_dispatch:
 
+# Nightly used to call flutter-build.yml for every platform. That reusable
+# workflow does not start on this fork. Windows builds are tag/manual via
+# windows-release.yml.
 jobs:
-  run-flutter-nightly-build:
-    if: github.repository == 'rustdesk/rustdesk'
-    uses: ./.github/workflows/flutter-build.yml
-    secrets: inherit
-    with:
-      upload-artifact: true
-      upload-tag: "nightly"
+  skipped-on-fork:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Nightly multi-platform build is disabled on this fork."
