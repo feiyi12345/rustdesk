@@ -1206,6 +1206,9 @@ void showAbout(OverlayDialogManager dialogManager) {
                     decoration: TextDecoration.underline,
                   )),
             )),
+        const Text(
+          '无限远程 基于 RustDesk 修改并再分发，遵循 GNU AGPL-3.0。',
+        ),
       ]),
       actions: [],
     );

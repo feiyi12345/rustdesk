@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="res/logo-header.svg" alt="RustDesk - Your remote desktop"><br>
+  <img src="flutter/assets/logo_light.png" alt="无限远程" width="320"><br>
+  <b>无限远程</b> — 基于 <a href="https://github.com/rustdesk/rustdesk">RustDesk</a> 的桌面远程分支（深色科技风）。可执行文件名为 <code>WuxianRemote</code>。授权协议仍是 <a href="LICENCE">GNU AGPL-3.0</a>，并保留 RustDesk / Purslane Tech Pte. Ltd. 的署名。<br>
   <a href="#raw-steps-to-build">Build</a> •
   <a href="#how-to-build-with-docker">Docker</a> •
   <a href="#file-structure">Structure</a> •

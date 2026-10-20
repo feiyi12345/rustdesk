@@ -651,7 +651,7 @@ class _DesktopTabState extends State<DesktopTab>
                         Offstage(
                             offstage: !showTitle,
                             child: const Text(
-                              "RustDesk",
+                              kAppDisplayName,
                               style: TextStyle(fontSize: 13),
                             ).marginOnly(left: 2))
                       ]).marginOnly(
@@ -1479,15 +1479,15 @@ class TabbarTheme extends ThemeExtension<TabbarTheme> {
 
   static const dark = TabbarTheme(
       selectedTabIconColor: MyTheme.accent,
-      unSelectedTabIconColor: Color.fromARGB(255, 30, 65, 98),
-      selectedTextColor: Colors.white,
-      unSelectedTextColor: Color.fromARGB(255, 192, 192, 192),
-      selectedIconColor: Color.fromARGB(255, 192, 192, 192),
-      unSelectedIconColor: Color.fromARGB(255, 255, 255, 255),
-      dividerColor: Color.fromARGB(255, 64, 64, 64),
-      hoverColor: Colors.black26,
-      closeHoverColor: Colors.black,
-      selectedTabBackgroundColor: Colors.black26);
+      unSelectedTabIconColor: Color(0xFF3D5A73),
+      selectedTextColor: Color(0xFFE7F0FF),
+      unSelectedTextColor: Color(0xFF8BA3C7),
+      selectedIconColor: Color(0xFF22D3EE),
+      unSelectedIconColor: Color(0xFF8BA3C7),
+      dividerColor: Color(0xFF1E3A5F),
+      hoverColor: Color(0x3322D3EE),
+      closeHoverColor: Color(0xFF0A1628),
+      selectedTabBackgroundColor: Color(0xFF152033));
 
   @override
   ThemeExtension<TabbarTheme> copyWith({

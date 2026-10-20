@@ -19,6 +19,9 @@ on:
 
 jobs:
   run-ci:
+    # The full matrix needs upstream signing secrets and macOS/Android runners.
+    # This fork publishes Windows from windows-release.yml instead.
+    if: github.repository == 'rustdesk/rustdesk'
     uses: ./.github/workflows/flutter-build.yml
     with:
       upload-artifact: false

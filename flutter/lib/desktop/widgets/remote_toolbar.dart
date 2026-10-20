@@ -943,11 +943,16 @@ class _PinMenu extends StatelessWidget {
         assetName: state.pin ? "assets/pinned.svg" : "assets/unpinned.svg",
         tooltip: state.pin ? 'Unpin Toolbar' : 'Pin Toolbar',
         onPressed: state.switchPin,
-        color:
-            state.pin ? _ToolbarTheme.blueColor : _ToolbarTheme.inactiveColor,
+        color: state.pin
+            ? _ToolbarTheme.blueColor
+            : (Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFB7C9E2)
+                : _ToolbarTheme.inactiveColor),
         hoverColor: state.pin
             ? _ToolbarTheme.hoverBlueColor
-            : _ToolbarTheme.hoverInactiveColor,
+            : (Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFE7F0FF)
+                : _ToolbarTheme.hoverInactiveColor),
       ),
     );
   }
@@ -967,10 +972,14 @@ class _MobileActionMenu extends StatelessWidget {
               !ffi.dialogManager.mobileActionsOverlayVisible.value),
           color: ffi.dialogManager.mobileActionsOverlayVisible.isTrue
               ? _ToolbarTheme.blueColor
-              : _ToolbarTheme.inactiveColor,
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFB7C9E2)
+                  : _ToolbarTheme.inactiveColor),
           hoverColor: ffi.dialogManager.mobileActionsOverlayVisible.isTrue
               ? _ToolbarTheme.hoverBlueColor
-              : _ToolbarTheme.hoverInactiveColor,
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFE7F0FF)
+                  : _ToolbarTheme.hoverInactiveColor),
         ));
   }
 }

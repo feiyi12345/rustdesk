@@ -347,8 +347,15 @@ class _ConnectionPageState extends State<ConnectionPage>
       width: 320 + 20 * 2,
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
       decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(13)),
-          border: Border.all(color: Theme.of(context).colorScheme.background)),
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          border: Border.all(color: MyTheme.accent.withOpacity(0.45)),
+          boxShadow: [
+            BoxShadow(
+              color: MyTheme.accent.withOpacity(0.16),
+              blurRadius: 18,
+              spreadRadius: -6,
+            ),
+          ]),
       child: Ink(
         child: Column(
           children: [
@@ -421,6 +428,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                           focusNode: fieldFocusNode,
                           style: const TextStyle(
                             fontFamily: 'WorkSans',
+                            fontFamilyFallback: MyTheme.cjkFallback,
                             fontSize: 22,
                             height: 1.4,
                           ),

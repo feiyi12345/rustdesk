@@ -130,7 +130,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       value: gFFI.serverModel,
       child: Container(
         width: isIncomingOnly ? 280.0 : 200.0,
-        color: Theme.of(context).colorScheme.background,
+        decoration: BoxDecoration(
+          gradient: Theme.of(context).brightness == Brightness.dark
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF101A2C), MyTheme.techBg],
+                )
+              : null,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? null
+              : Theme.of(context).colorScheme.background,
+        ),
         child: Stack(
           children: [
             Column(
@@ -187,9 +198,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      margin: const EdgeInsets.only(left: 20, right: 11),
-      height: 57,
+      margin: const EdgeInsets.only(left: 12, right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      height: 64,
+      decoration: BoxDecoration(
+        color: dark ? MyTheme.techCard.withOpacity(0.85) : null,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: dark ? MyTheme.accent.withOpacity(0.35) : Colors.transparent,
+        ),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
@@ -294,8 +314,17 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
+      margin: EdgeInsets.only(left: 12, right: 8, top: 10, bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: dark ? MyTheme.techCard.withOpacity(0.85) : null,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: dark ? MyTheme.accent.withOpacity(0.35) : Colors.transparent,
+        ),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
@@ -351,7 +380,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                   Icons.refresh,
                                   color: refreshHover.value
                                       ? textColor
-                                      : Color(0xFFDDDDDD),
+                                      : textColor?.withOpacity(0.55),
                                   size: 22,
                                 ))),
                           ),
@@ -366,7 +395,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 Icons.edit,
                                 color: editHover.value
                                     ? textColor
-                                    : Color(0xFFDDDDDD),
+                                    : textColor?.withOpacity(0.55),
                                 size: 22,
                               ).marginOnly(right: 8, top: 4),
                             ),

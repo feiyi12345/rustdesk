@@ -2610,8 +2610,15 @@ class _AboutState extends State<_About> {
                     translate('Website'),
                     style: linkStyle,
                   ).marginSymmetric(vertical: 4.0)),
+              const Text(
+                '无限远程 基于 RustDesk 修改并再分发，遵循 GNU AGPL-3.0。RustDesk © Purslane Tech Pte. Ltd.',
+              ).marginSymmetric(vertical: 4.0),
               Container(
-                decoration: const BoxDecoration(color: Color(0xFF2c8cff)),
+                decoration: BoxDecoration(
+                  color: MyTheme.techBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: MyTheme.accent.withOpacity(0.45)),
+                ),
                 padding:
                     const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
                 child: SelectionArea(

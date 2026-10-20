@@ -1175,9 +1175,32 @@ pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
     result
 }
 
+/// ASCII package / process / config name. The window title and tray use
+/// [`get_display_name`] so the Chinese product name never lands in a path.
+pub const FORK_PACKAGE_NAME: &str = "WuxianRemote";
+pub const FORK_DISPLAY_NAME: &str = "无限远程";
+
+/// Rename the stock client unless a custom-client config already did.
+pub fn apply_fork_identity() {
+    let mut name = hbb_common::config::APP_NAME.write().unwrap();
+    if name.as_str() == "RustDesk" {
+        *name = FORK_PACKAGE_NAME.to_owned();
+    }
+}
+
 #[inline]
 pub fn get_app_name() -> String {
     hbb_common::config::APP_NAME.read().unwrap().clone()
+}
+
+#[inline]
+pub fn get_display_name() -> String {
+    let app = get_app_name();
+    if app == FORK_PACKAGE_NAME {
+        FORK_DISPLAY_NAME.to_owned()
+    } else {
+        app
+    }
 }
 
 #[inline]

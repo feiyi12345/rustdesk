@@ -181,17 +181,17 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
   );
 
   static final dark = ColorThemeExtension(
-    border: Color(0xFF555555),
-    border2: Color(0xFFE5E5E5),
-    border3: Colors.white24,
-    highlight: Color(0xFF3F3F3F),
-    drag_indicator: Colors.grey,
-    shadow: Colors.grey,
-    errorBannerBg: Color(0xFF470F2D),
-    me: Colors.greenAccent,
-    toastBg: Colors.white.withOpacity(0.6),
-    toastText: Colors.black,
-    divider: Colors.white38,
+    border: Color(0xFF1E3A5F),
+    border2: Color(0xFF2A4A6E),
+    border3: Color(0x6622D3EE),
+    highlight: Color(0xFF1A2740),
+    drag_indicator: Color(0xFF22D3EE),
+    shadow: Color(0x6622D3EE),
+    errorBannerBg: Color(0xFF3A1424),
+    me: Color(0xFF34D399),
+    toastBg: Color(0xEE101826),
+    toastText: Color(0xFFE7F0FF),
+    divider: Color(0xFF1E3A5F),
   );
 
   @override
@@ -249,17 +249,33 @@ class MyTheme {
   MyTheme._();
 
   static const Color grayBg = Color(0xFFEFEFF2);
-  static const Color accent = Color(0xFF0071FF);
-  static const Color accent50 = Color(0x770071FF);
-  static const Color accent80 = Color(0xAA0071FF);
-  static const Color canvasColor = Color(0xFF212121);
-  static const Color border = Color(0xFFCCCCCC);
-  static const Color idColor = Color(0xFF00B6F0);
-  static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
-  static const Color cmIdColor = Color(0xFF21790B);
+  // Cyan / electric blue. Shared by the dark tech theme and the light option.
+  static const Color accent = Color(0xFF22D3EE);
+  static const Color accent50 = Color(0x7722D3EE);
+  static const Color accent80 = Color(0xAA0891B2);
+  static const Color canvasColor = Color(0xFF070B14);
+  static const Color border = Color(0xFF1E3A5F);
+  static const Color idColor = Color(0xFF67E8F9);
+  static const Color darkGray = Color.fromARGB(255, 139, 163, 199);
+  static const Color cmIdColor = Color(0xFF34D399);
   static const Color dark = Colors.black87;
-  static const Color button = Color(0xFF2C8CFF);
-  static const Color hoverBorder = Color(0xFF999999);
+  static const Color button = Color(0xFF06B6D4);
+  static const Color hoverBorder = Color(0xFF67E8F9);
+  static const Color techBg = Color(0xFF070B14);
+  static const Color techSurface = Color(0xFF101826);
+  static const Color techCard = Color(0xFF152033);
+  static const Color techLine = Color(0xFF1E3A5F);
+  static const Color techText = Color(0xFFE7F0FF);
+  static const Color techMuted = Color(0xFF8BA3C7);
+  static const List<String> cjkFallback = [
+    'Microsoft YaHei UI',
+    'Microsoft YaHei',
+    'PingFang SC',
+    'Noto Sans SC',
+    'Noto Sans CJK SC',
+    'Source Han Sans SC',
+    'Segoe UI',
+  ];
 
   // ListTile
   static const ListTileThemeData listTileTheme = ListTileThemeData(
@@ -370,6 +386,7 @@ class MyTheme {
   );
 
   static ThemeData lightTheme = ThemeData(
+    fontFamilyFallback: cjkFallback,
     // https://stackoverflow.com/questions/77537315/after-upgrading-to-flutter-3-16-the-app-bar-background-color-button-size-and
     useMaterial3: false,
     brightness: Brightness.light,
@@ -429,7 +446,8 @@ class MyTheme {
         : mobileTextButtonTheme,
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: MyTheme.accent,
+        backgroundColor: MyTheme.button,
+        foregroundColor: const Color(0xFF04131C),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.0),
         ),
@@ -469,50 +487,85 @@ class MyTheme {
     ],
   );
   static ThemeData darkTheme = ThemeData(
+    fontFamilyFallback: cjkFallback,
     useMaterial3: false,
     brightness: Brightness.dark,
-    hoverColor: Color.fromARGB(255, 45, 46, 53),
-    scaffoldBackgroundColor: Color(0xFF18191E),
-    dialogBackgroundColor: Color(0xFF18191E),
+    primaryColor: accent,
+    hoverColor: Color(0x3322D3EE),
+    scaffoldBackgroundColor: techBg,
+    dialogBackgroundColor: techSurface,
     appBarTheme: AppBarTheme(
+      backgroundColor: techBg,
+      foregroundColor: techText,
+      elevation: 0,
       shadowColor: Colors.transparent,
     ),
+    dividerTheme: DividerThemeData(
+      color: techLine,
+      thickness: 1,
+      space: 1,
+    ),
+    iconTheme: IconThemeData(color: techMuted),
     dialogTheme: DialogTheme(
-      elevation: 15,
+      backgroundColor: techSurface,
+      elevation: 16,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18.0),
+        borderRadius: BorderRadius.circular(16.0),
         side: BorderSide(
           width: 1,
-          color: Color(0xFF24252B),
+          color: techLine,
         ),
       ),
     ),
     scrollbarTheme: scrollbarThemeDark,
     inputDecorationTheme: (isDesktop || isWebDesktop)
         ? InputDecorationTheme(
-            fillColor: Color(0xFF24252B),
+            fillColor: techBg,
             filled: true,
             isDense: true,
+            hintStyle: TextStyle(color: techMuted),
+            labelStyle: TextStyle(color: techMuted),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: techLine),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: techLine),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: accent, width: 1.4),
             ),
           )
         : null,
     textTheme: const TextTheme(
-      titleLarge: TextStyle(fontSize: 19),
-      titleSmall: TextStyle(fontSize: 14),
-      bodySmall: TextStyle(fontSize: 12, height: 1.25),
-      bodyMedium: TextStyle(fontSize: 14, height: 1.25),
+      titleLarge: TextStyle(
+          fontSize: 19, color: techText, fontWeight: FontWeight.w600, height: 1.3),
+      titleSmall: TextStyle(fontSize: 14, color: techText),
+      bodySmall: TextStyle(fontSize: 12, height: 1.35, color: techMuted),
+      bodyMedium: TextStyle(fontSize: 14, height: 1.35, color: techText),
       labelLarge: TextStyle(
         fontSize: 16.0,
         fontWeight: FontWeight.bold,
-        color: accent80,
+        color: accent,
       ),
     ),
-    cardColor: Color(0xFF24252B),
+    cardColor: techCard,
+    cardTheme: CardTheme(
+      color: techCard,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        side: BorderSide(color: techLine),
+      ),
+    ),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
-      labelColor: Colors.white70,
+      labelColor: techText,
+      unselectedLabelColor: techMuted,
+      indicatorColor: accent,
     ),
     tooltipTheme: tooltipTheme(),
     splashColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
@@ -533,41 +586,60 @@ class MyTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: MyTheme.accent,
-        foregroundColor: Colors.white,
+        foregroundColor: const Color(0xFF04131C),
         disabledForegroundColor: Colors.white70,
         disabledBackgroundColor: Colors.white10,
+        elevation: 0,
+        shadowColor: accent.withOpacity(0.6),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(10.0),
         ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        backgroundColor: Color(0xFF24252B),
-        side: BorderSide(color: Colors.white12, width: 0.5),
+        backgroundColor: techCard,
+        side: BorderSide(color: accent.withOpacity(0.45), width: 1),
         disabledForegroundColor: Colors.white70,
-        foregroundColor: Colors.white70,
+        foregroundColor: techText,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(10.0),
         ),
       ),
     ),
-    switchTheme: switchTheme(),
+    switchTheme: switchTheme().copyWith(
+      thumbColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.selected)) return accent;
+        return techMuted;
+      }),
+      trackColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.selected)) {
+          return accent.withOpacity(0.45);
+        }
+        return techLine;
+      }),
+    ),
     radioTheme: radioTheme(),
     checkboxTheme: checkboxTheme,
     listTileTheme: listTileTheme,
     menuBarTheme: MenuBarThemeData(
         style: MenuStyle(
-            backgroundColor: MaterialStatePropertyAll(Color(0xFF121212)))),
+            backgroundColor: MaterialStatePropertyAll(techCard))),
     colorScheme: ColorScheme.dark(
-      primary: Colors.blue,
-      secondary: accent,
-      background: Color(0xFF24252B),
+      primary: accent,
+      secondary: button,
+      background: techSurface,
+      surface: techCard,
+      onPrimary: Color(0xFF04131C),
+      onSurface: techText,
+      onBackground: techText,
     ),
     popupMenuTheme: PopupMenuThemeData(
+        color: techCard,
+        textStyle: TextStyle(color: techText, fontSize: 14),
         shape: RoundedRectangleBorder(
-      side: BorderSide(color: Colors.white24),
-      borderRadius: BorderRadius.all(Radius.circular(8.0)),
+      side: BorderSide(color: techLine),
+      borderRadius: BorderRadius.all(Radius.circular(12.0)),
     )),
   ).copyWith(
     extensions: <ThemeExtension<dynamic>>[
@@ -583,13 +655,9 @@ class MyTheme {
   static Future<void> changeDarkMode(ThemeMode mode) async {
     Get.changeThemeMode(mode);
     if (desktopType == DesktopType.main || isAndroid || isIOS || isWeb) {
-      if (mode == ThemeMode.system) {
-        await bind.mainSetLocalOption(
-            key: kCommConfKeyTheme, value: defaultOptionTheme);
-      } else {
-        await bind.mainSetLocalOption(
-            key: kCommConfKeyTheme, value: mode.toShortString());
-      }
+      // "system" must be stored explicitly. An empty value is the dark default.
+      final stored = mode == ThemeMode.system ? 'system' : mode.toShortString();
+      await bind.mainSetLocalOption(key: kCommConfKeyTheme, value: stored);
       if (!isWeb) await bind.mainChangeTheme(dark: mode.toShortString());
       // Synchronize the window theme of the system.
       updateSystemWindowTheme();
@@ -622,10 +690,12 @@ class MyTheme {
     switch (v) {
       case "light":
         return ThemeMode.light;
+      case "system":
+        return ThemeMode.system;
       case "dark":
         return ThemeMode.dark;
       default:
-        return ThemeMode.system;
+        return ThemeMode.dark;
     }
   }
 }
@@ -3020,8 +3090,10 @@ int versionCmp(String v1, String v2) {
   return bind.versionToNumber(v: v1) - bind.versionToNumber(v: v2);
 }
 
+const kAppDisplayName = '无限远程';
+
 String getWindowName({WindowType? overrideType}) {
-  final name = bind.mainGetAppNameSync();
+  final name = kAppDisplayName;
   switch (overrideType ?? kWindowType) {
     case WindowType.Main:
       return name;
