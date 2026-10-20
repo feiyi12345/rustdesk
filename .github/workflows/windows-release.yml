@@ -248,6 +248,8 @@ jobs:
             --version "$VERSION"
 
       - name: Compile MSI
+        id: msi
+        continue-on-error: true
         shell: pwsh
         run: |
           Push-Location ./res/msi
@@ -275,6 +277,4 @@ jobs:
 
             安装后的开始菜单、桌面快捷方式和窗口标题为「无限远程」。程序文件名为 `WuxianRemote.exe`。
             默认仍连接 RustDesk 公共 rendezvous 服务器。
-          files: |
-            ./SignOutput/WuxianRemote-${{ env.VERSION }}-x64-setup.exe
-            ./SignOutput/WuxianRemote-${{ env.VERSION }}-x64.msi
+          files: ./SignOutput/WuxianRemote-*

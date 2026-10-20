@@ -4,7 +4,8 @@
 
 	<?include Includes.wxi?>
 
-	<Package Name="$(var.ProductDisplayName)" Version="$(var.Version)" Manufacturer="$(var.Manufacturer)" Language="!(loc.ProductLanguage)" UpgradeCode="$(var.UpgradeCode)" Scope="perMachine">
+	<!-- GBK so 无限远程 fits. WiX summary info cannot use UTF-8. -->
+	<Package Name="$(var.ProductDisplayName)" Codepage="936" Version="$(var.Version)" Manufacturer="$(var.Manufacturer)" Language="!(loc.ProductLanguage)" UpgradeCode="$(var.UpgradeCode)" Scope="perMachine">
 
 		<SummaryInformation Keywords="Installer" Description="$(var.Description)" Codepage="!(loc.SummaryCodepage)" />
 
