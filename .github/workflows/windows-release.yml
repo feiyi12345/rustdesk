@@ -158,10 +158,21 @@ jobs:
         env:
           VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
         run: |
-          if ! $VCPKG_ROOT/vcpkg \
-            install \
-            --triplet x64-windows-static \
-            --x-install-root="$VCPKG_ROOT/installed"; then
+          ok=0
+          for attempt in 1 2 3; do
+            if $VCPKG_ROOT/vcpkg \
+              install \
+              --triplet x64-windows-static \
+              --x-install-root="$VCPKG_ROOT/installed"; then
+              ok=1
+              break
+            fi
+            echo "vcpkg install failed (attempt ${attempt})"
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 30))
+            fi
+          done
+          if [ "$ok" -ne 1 ]; then
             find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
               echo "$_1:"
               cat "$_1"
