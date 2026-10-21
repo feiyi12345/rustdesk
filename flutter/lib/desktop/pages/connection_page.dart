@@ -1,5 +1,3 @@
-// main window right pane
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -10,7 +8,6 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 
@@ -31,23 +28,12 @@ class OnlineStatusWidget extends StatefulWidget {
   State<OnlineStatusWidget> createState() => _OnlineStatusWidgetState();
 }
 
-/// State for the connection page.
 class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   final _svcStopped = Get.find<RxBool>(tag: 'stop-service');
-  final _svcIsUsingPublicServer = true.obs;
   Timer? _updateTimer;
 
   double get em => 14.0;
   double? get height => bind.isIncomingOnly() ? null : em * 3;
-
-  void onUsePublicServerGuide() {
-    const url = "https://rustdesk.com/pricing";
-    canLaunchUrlString(url).then((can) {
-      if (can) {
-        launchUrlString(url);
-      }
-    });
-  }
 
   @override
   void initState() {
@@ -78,37 +64,6 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               .marginOnly(left: em),
         );
 
-    setupServerWidget() => Flexible(
-          child: Offstage(
-            offstage: !(!_svcStopped.value &&
-                stateGlobal.svcStatus.value == SvcStatus.ready &&
-                _svcIsUsingPublicServer.value),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(', ', style: TextStyle(fontSize: em)),
-                Flexible(
-                  child: InkWell(
-                    onTap: onUsePublicServerGuide,
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            translate('setup_server_tip'),
-                            style: TextStyle(
-                                decoration: TextDecoration.underline,
-                                fontSize: em),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
-        );
-
     basicWidget() => Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -129,11 +84,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               width: isIncomingOnly ? 226 : null,
               child: _buildConnStatusMsg(),
             ),
-            // stop
             if (!isIncomingOnly) startServiceWidget(),
-            // ready && public
-            // No need to show the guide if is custom client.
-            if (!isIncomingOnly) setupServerWidget(),
           ],
         );
 
@@ -170,24 +121,17 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   updateStatus() async {
     final status =
         jsonDecode(await bind.mainGetConnectStatus()) as Map<String, dynamic>;
-    final statusNum = status['status_num'] as int;
-    if (statusNum == 0) {
-      stateGlobal.svcStatus.value = SvcStatus.connecting;
-    } else if (statusNum == -1) {
-      stateGlobal.svcStatus.value = SvcStatus.notReady;
-    } else if (statusNum == 1) {
-      stateGlobal.svcStatus.value = SvcStatus.ready;
-    } else {
-      stateGlobal.svcStatus.value = SvcStatus.notReady;
-    }
-    _svcIsUsingPublicServer.value = await bind.mainIsUsingPublicServer();
+    stateGlobal.svcStatus.value = switch (status['status_num']) {
+      0 => SvcStatus.connecting,
+      1 => SvcStatus.ready,
+      _ => SvcStatus.notReady,
+    };
     try {
       stateGlobal.videoConnCount.value = status['video_conn_count'] as int;
     } catch (_) {}
   }
 }
 
-/// Connection page for connecting to a remote peer.
 class ConnectionPage extends StatefulWidget {
   const ConnectionPage({Key? key}) : super(key: key);
 
@@ -195,10 +139,8 @@ class ConnectionPage extends StatefulWidget {
   State<ConnectionPage> createState() => _ConnectionPageState();
 }
 
-/// State for the connection page.
 class _ConnectionPageState extends State<ConnectionPage>
     with SingleTickerProviderStateMixin, WindowListener {
-  /// Controller for the id input bar.
   final _idController = IDTextEditingController();
 
   final RxBool _idInputFocused = false.obs;
@@ -269,13 +211,11 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   @override
   void onWindowEnterFullScreen() {
-    // Remove edge border by setting the value to zero.
     stateGlobal.resizeEdgeSize.value = 0;
   }
 
   @override
   void onWindowLeaveFullScreen() {
-    // Restore edge border to default edge size.
     stateGlobal.resizeEdgeSize.value = stateGlobal.isMaximized.isTrue
         ? kMaximizeEdgeSize
         : windowResizeEdgeSize;
@@ -295,7 +235,7 @@ class _ConnectionPageState extends State<ConnectionPage>
       }
 
       final textLength = _idEditingController.value.text.length;
-      // Select all to facilitate removing text, just following the behavior of address input of chrome.
+      // Select all on focus, like a browser address bar, so typing replaces the old ID.
       _idEditingController.selection =
           TextSelection(baseOffset: 0, extentOffset: textLength);
     }
@@ -325,26 +265,21 @@ class _ConnectionPageState extends State<ConnectionPage>
     );
   }
 
-  /// Callback for the connect button.
-  /// Connects to the selected peer.
   void onConnect(
       {bool isFileTransfer = false,
       bool isViewCamera = false,
       bool isTerminal = false,
       bool isTcpTunneling = false}) {
-    var id = _idController.id;
-    connect(context, id,
+    connect(context, _idController.id,
         isFileTransfer: isFileTransfer,
         isViewCamera: isViewCamera,
         isTerminal: isTerminal,
         isTcpTunneling: isTcpTunneling);
   }
 
-  /// UI for the remote ID TextField.
-  /// Search for a peer.
   Widget _buildRemoteIDTextField(BuildContext context) {
     var w = Container(
-      width: 320 + 20 * 2,
+      width: 400,
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
       decoration: BoxDecoration(
           borderRadius: const BorderRadius.all(Radius.circular(16)),
@@ -492,7 +427,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                                 child: ConstrainedBox(
                                   constraints: BoxConstraints(
                                     maxHeight: maxHeight,
-                                    maxWidth: 319,
+                                    maxWidth: 360,
                                   ),
                                   child: _allPeersLoader.peers.isEmpty &&
                                           !_allPeersLoader.isPeersLoaded
@@ -523,112 +458,131 @@ class _ConnectionPageState extends State<ConnectionPage>
                 )),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 13.0),
-              child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                SizedBox(
-                  height: 28.0,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      onConnect();
-                    },
-                    child: Text(translate("Connect")),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  height: 28.0,
-                  width: 28.0,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: StatefulBuilder(
-                      builder: (context, setState) {
-                        var offset = Offset(0, 0);
-                        return Obx(() => InkWell(
-                              child: _menuOpen.value
-                                  ? Transform.rotate(
-                                      angle: pi,
-                                      child: Icon(IconFont.more, size: 14),
-                                    )
-                                  : Icon(IconFont.more, size: 14),
-                              onTapDown: (e) {
-                                offset = e.globalPosition;
-                              },
-                              onTap: () async {
-                                _menuOpen.value = true;
-                                final x = offset.dx;
-                                final y = offset.dy;
-                                await mod_menu
-                                    .showMenu(
-                                  context: context,
-                                  position: RelativeRect.fromLTRB(x, y, x, y),
-                                  items: [
-                                    (
-                                      'Transfer file',
-                                      () => onConnect(isFileTransfer: true)
-                                    ),
-                                    (
-                                      'View camera',
-                                      () => onConnect(isViewCamera: true)
-                                    ),
-                                    (
-                                      '${translate('Terminal')} (beta)',
-                                      () => onConnect(isTerminal: true)
-                                    ),
-                                    // `connect` routes this through the
-                                    // desktop path only; the peer card gates
-                                    // it the same way.
-                                    if (isDesktop)
-                                      (
-                                        'TCP tunneling',
-                                        () => onConnect(isTcpTunneling: true)
-                                      ),
-                                  ]
-                                      .map((e) => MenuEntryButton<String>(
-                                            childBuilder: (TextStyle? style) =>
-                                                Text(
-                                              translate(e.$1),
-                                              style: style,
-                                            ),
-                                            proc: () => e.$2(),
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal:
-                                                    kDesktopMenuPadding.left),
-                                            dismissOnClicked: true,
-                                          ))
-                                      .map((e) => e.build(
-                                          context,
-                                          const MenuConfig(
-                                              commonColor: CustomPopupMenuTheme
-                                                  .commonColor,
-                                              height:
-                                                  CustomPopupMenuTheme.height,
-                                              dividerHeight:
-                                                  CustomPopupMenuTheme
-                                                      .dividerHeight)))
-                                      .expand((i) => i)
-                                      .toList(),
-                                  elevation: 8,
-                                )
-                                    .then((_) {
-                                  _menuOpen.value = false;
-                                });
-                              },
-                            ));
-                      },
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 38,
+                    child: ElevatedButton.icon(
+                      onPressed: () => onConnect(),
+                      icon: const Icon(Icons.desktop_windows_outlined, size: 18),
+                      label: Text(translate("Connect")),
                     ),
                   ),
                 ),
-              ]),
-            ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 38,
+                    child: OutlinedButton.icon(
+                      onPressed: () => onConnect(isFileTransfer: true),
+                      icon: const Icon(Icons.folder_outlined, size: 18),
+                      label: Text(translate("Transfer file")),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildMoreButton(context),
+              ],
+            ).marginOnly(top: 14),
+            _buildSteps(context).marginOnly(top: 18),
           ],
         ),
       ),
     );
     return Container(
         constraints: const BoxConstraints(maxWidth: 600), child: w);
+  }
+
+  Widget _buildMoreButton(BuildContext context) {
+    var offset = Offset.zero;
+    return Obx(() => Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            border: Border.all(color: Theme.of(context).dividerColor),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTapDown: (e) => offset = e.globalPosition,
+            onTap: () => _showMoreMenu(context, offset),
+            child: Transform.rotate(
+              angle: _menuOpen.value ? pi : 0,
+              child: Icon(IconFont.more, size: 14),
+            ),
+          ),
+        ));
+  }
+
+  Future<void> _showMoreMenu(BuildContext context, Offset offset) async {
+    _menuOpen.value = true;
+    final items = [
+      ('View camera', () => onConnect(isViewCamera: true)),
+      ('${translate('Terminal')} (beta)', () => onConnect(isTerminal: true)),
+      // `connect` routes this through the desktop path only; the peer card
+      // gates it the same way.
+      if (isDesktop)
+        ('TCP tunneling', () => onConnect(isTcpTunneling: true)),
+    ];
+    const config = MenuConfig(
+        commonColor: CustomPopupMenuTheme.commonColor,
+        height: CustomPopupMenuTheme.height,
+        dividerHeight: CustomPopupMenuTheme.dividerHeight);
+    await mod_menu.showMenu(
+      context: context,
+      position:
+          RelativeRect.fromLTRB(offset.dx, offset.dy, offset.dx, offset.dy),
+      items: items
+          .map((e) => MenuEntryButton<String>(
+                childBuilder: (TextStyle? style) =>
+                    Text(translate(e.$1), style: style),
+                proc: e.$2,
+                padding:
+                    EdgeInsets.symmetric(horizontal: kDesktopMenuPadding.left),
+                dismissOnClicked: true,
+              ).build(context, config))
+          .expand((i) => i)
+          .toList(),
+      elevation: 8,
+    );
+    _menuOpen.value = false;
+  }
+
+  Widget _buildSteps(BuildContext context) {
+    const steps = [
+      '请对方打开本软件，把 TA 的 ID 和密码告诉你',
+      '在上方输入对方 ID，点击「连接」',
+      '输入对方的密码，即可开始远程控制',
+    ];
+    final style = Theme.of(context).textTheme.bodySmall;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < steps.length; i++)
+          Row(
+            children: [
+              Container(
+                width: 18,
+                height: 18,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: MyTheme.accent.withOpacity(0.15),
+                ),
+                child: Text(
+                  '${i + 1}',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: MyTheme.accent,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text(steps[i], style: style)),
+            ],
+          ).marginOnly(bottom: 6),
+      ],
+    );
   }
 }
