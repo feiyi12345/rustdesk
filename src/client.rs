@@ -1002,7 +1002,11 @@ impl Client {
                     Some(rendezvous_message::Union::PunchHoleResponse(ph)) => {
                         if ph.socket_addr.is_empty() {
                             if !ph.other_failure.is_empty() {
-                                bail!(ph.other_failure);
+                                bail!(punch_failure_text(
+                                    &ph.other_failure,
+                                    token.is_empty(),
+                                    crate::using_public_server(),
+                                ));
                             }
                             match ph.failure.enum_value() {
                                 Ok(punch_hole_response::Failure::ID_NOT_EXIST) => {
@@ -5190,9 +5194,40 @@ pub fn check_if_retry(msgtype: &str, title: &str, text: &str, retry_for_relay: b
                 && !text.to_lowercase().contains("not allowed")))
 }
 
+/// Text the public rendezvous returns for every id when the punch has no
+/// account token. Probing `rs-ny.rustdesk.com` shows the same sentence for a
+/// real id and for ids that cannot exist, so it does not mean the peer is
+/// offline.
+pub(crate) const PUBLIC_SERVER_ANONYMOUS_FAILURE: &str =
+    "Failed to connect: the target device is offline or does not exist.";
+
+/// Shown instead of [`PUBLIC_SERVER_ANONYMOUS_FAILURE`] when this client has
+/// not logged in. Must contain "failed" so [`check_if_retry`] does not treat
+/// it as a transient error, and must not start with "Failed" so [`Client::start`]
+/// does not append "Please try later" and the translator does not split it.
+pub(crate) const PUBLIC_SERVER_LOGIN_REQUIRED: &str = "The connection failed because the public server requires both devices to log in with the same account. Open Settings, then Account, sign in on each device, and try again.";
+
+pub(crate) fn punch_failure_text(
+    other_failure: &str,
+    token_empty: bool,
+    public_server: bool,
+) -> String {
+    if public_server
+        && token_empty
+        && other_failure.contains("offline or does not exist")
+    {
+        PUBLIC_SERVER_LOGIN_REQUIRED.to_owned()
+    } else {
+        other_failure.to_owned()
+    }
+}
+
 #[cfg(test)]
 mod retry_tests {
-    use super::check_if_retry;
+    use super::{
+        check_if_retry, punch_failure_text, PUBLIC_SERVER_ANONYMOUS_FAILURE,
+        PUBLIC_SERVER_LOGIN_REQUIRED,
+    };
 
     #[test]
     fn incoming_only_error_is_not_retryable() {
@@ -5202,6 +5237,29 @@ mod retry_tests {
             "Incoming only mode",
             false,
         ));
+    }
+
+    #[test]
+    fn anonymous_public_lookup_asks_for_login() {
+        let text = punch_failure_text(PUBLIC_SERVER_ANONYMOUS_FAILURE, true, true);
+        assert_eq!(text, PUBLIC_SERVER_LOGIN_REQUIRED);
+        assert!(!check_if_retry("error", "Connection Error", &text, false));
+    }
+
+    #[test]
+    fn logged_in_or_private_server_keeps_the_server_text() {
+        assert_eq!(
+            punch_failure_text(PUBLIC_SERVER_ANONYMOUS_FAILURE, false, true),
+            PUBLIC_SERVER_ANONYMOUS_FAILURE
+        );
+        assert_eq!(
+            punch_failure_text(PUBLIC_SERVER_ANONYMOUS_FAILURE, true, false),
+            PUBLIC_SERVER_ANONYMOUS_FAILURE
+        );
+        assert_eq!(
+            punch_failure_text("Key mismatch", true, true),
+            "Key mismatch"
+        );
     }
 }
 

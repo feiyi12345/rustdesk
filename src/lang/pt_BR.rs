@@ -813,5 +813,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("shortcut-key-not-supported", "Não é possível usar \"{}\" como atalho."),
         ("On", "Ativado"),
         ("Off", "Desativado"),
+        ("The connection failed because the public server requires both devices to log in with the same account. Open Settings, then Account, sign in on each device, and try again.", ""),
     ].iter().cloned().collect();
 }
