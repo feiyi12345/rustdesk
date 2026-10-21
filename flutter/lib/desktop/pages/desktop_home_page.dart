@@ -6,7 +6,6 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
@@ -23,7 +22,6 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
-import '../widgets/button.dart';
 
 class DesktopHomePage extends StatefulWidget {
   const DesktopHomePage({Key? key}) : super(key: key);
@@ -31,8 +29,6 @@ class DesktopHomePage extends StatefulWidget {
   @override
   State<DesktopHomePage> createState() => _DesktopHomePageState();
 }
-
-const borderColor = Color(0xFF2F65BA);
 
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
@@ -46,11 +42,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var watchIsCanScreenRecording = false;
   var watchIsProcessTrust = false;
   var watchIsInputMonitoring = false;
-  var watchIsCanRecordAudio = false;
   Timer? _updateTimer;
   bool isCardClosed = false;
 
-  final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
 
   final GlobalKey _childKey = GlobalKey();
@@ -92,24 +86,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
-      FutureBuilder<Widget>(
-        future: Future.value(
-            Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
-        builder: (_, data) {
-          if (data.hasData) {
-            if (isIncomingOnly) {
-              if (isInHomePage()) {
-                Future.delayed(Duration(milliseconds: 300), () {
-                  _updateWindowSize();
-                });
-              }
-            }
-            return data.data!;
-          } else {
-            return const Offstage();
-          }
-        },
-      ),
+      Obx(() {
+        final cards = buildHelpCards(stateGlobal.updateUrl.value);
+        if (isIncomingOnly && isInHomePage()) {
+          Future.delayed(
+              const Duration(milliseconds: 300), _updateWindowSize);
+        }
+        return cards;
+      }),
     ];
     if (isIncomingOnly) {
       children.addAll([
@@ -125,22 +109,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ).marginOnly(bottom: 6, right: 6)
       ]);
     }
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 200.0,
+        width: isIncomingOnly ? 280.0 : 240.0,
         decoration: BoxDecoration(
-          gradient: Theme.of(context).brightness == Brightness.dark
+          gradient: dark
               ? const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [Color(0xFF101A2C), MyTheme.techBg],
                 )
               : null,
-          color: Theme.of(context).brightness == Brightness.dark
-              ? null
-              : Theme.of(context).colorScheme.background,
+          color: dark ? null : Theme.of(context).colorScheme.background,
         ),
         child: Stack(
           children: [
@@ -159,29 +141,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             if (isOutgoingOnly)
               Positioned(
                 bottom: 6,
-                left: 12,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    child: Obx(
-                      () => Icon(
-                        Icons.settings,
-                        color: _editHover.value
-                            ? textColor
-                            : Colors.grey.withOpacity(0.5),
-                        size: 22,
-                      ),
-                    ),
-                    onTap: () => {
-                      if (DesktopSettingPage.tabKeys.isNotEmpty)
-                        {
-                          DesktopSettingPage.switch2page(
-                              DesktopSettingPage.tabKeys[0])
-                        }
-                    },
-                    onHover: (value) => _editHover.value = value,
-                  ),
-                ),
+                left: 6,
+                child: _actionIcon(Icons.settings, 'Settings', () {
+                  if (DesktopSettingPage.tabKeys.isNotEmpty) {
+                    DesktopSettingPage.switch2page(
+                        DesktopSettingPage.tabKeys[0]);
+                  }
+                }),
               )
           ],
         ),
@@ -196,261 +162,127 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
-  buildIDBoard(BuildContext context) {
-    final model = gFFI.serverModel;
+  void _copy(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    showToast(translate("Copied"));
+  }
+
+  Widget _actionIcon(IconData icon, String tip, VoidCallback onPressed) {
+    return IconButton(
+      tooltip: translate(tip),
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      splashRadius: 18,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+    );
+  }
+
+  Widget _infoCard({
+    required String label,
+    required TextEditingController controller,
+    required double fontSize,
+    List<Widget> actions = const [],
+  }) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
     return Container(
-      margin: const EdgeInsets.only(left: 12, right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      height: 64,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
       decoration: BoxDecoration(
-        color: dark ? MyTheme.techCard.withOpacity(0.85) : null,
+        color: dark ? MyTheme.techCard : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: dark ? MyTheme.accent.withOpacity(0.35) : Colors.transparent,
+          color: dark
+              ? MyTheme.accent.withOpacity(0.35)
+              : Theme.of(context).dividerColor,
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Container(
-            width: 2,
-            decoration: const BoxDecoration(color: MyTheme.accent),
-          ).marginOnly(top: 5),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 25,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          translate("ID"),
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.color
-                                  ?.withOpacity(0.5)),
-                        ).marginOnly(top: 5),
-                        buildPopupMenu(context)
-                      ],
-                    ),
-                  ),
-                  Flexible(
-                    child: GestureDetector(
-                      onDoubleTap: () {
-                        Clipboard.setData(
-                            ClipboardData(text: model.serverId.text));
-                        showToast(translate("Copied"));
-                      },
-                      child: TextFormField(
-                        controller: model.serverId,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.only(top: 10, bottom: 10),
-                        ),
-                        style: TextStyle(
-                          fontSize: 22,
-                        ),
-                      ).workaroundFreezeLinuxMint(),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildPopupMenu(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    RxBool hover = false.obs;
-    return InkWell(
-      onTap: DesktopTabPage.onAddSetting,
-      child: Tooltip(
-        message: translate('Settings'),
-        child: Obx(
-          () => CircleAvatar(
-            radius: 15,
-            backgroundColor: hover.value
-                ? Theme.of(context).scaffoldBackgroundColor
-                : Theme.of(context).colorScheme.background,
-            child: Icon(
-              Icons.more_vert_outlined,
-              size: 20,
-              color: hover.value ? textColor : textColor?.withOpacity(0.5),
-            ),
-          ),
-        ),
-      ),
-      onHover: (value) => hover.value = value,
-    );
-  }
-
-  buildPasswordBoard(BuildContext context) {
-    return ChangeNotifierProvider.value(
-        value: gFFI.serverModel,
-        child: Consumer<ServerModel>(
-          builder: (context, model, child) {
-            return buildPasswordBoard2(context, model);
-          },
-        ));
-  }
-
-  buildPasswordBoard2(BuildContext context, ServerModel model) {
-    RxBool refreshHover = false.obs;
-    RxBool editHover = false.obs;
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    final showOneTime = model.approveMode != 'click' &&
-        model.verificationMethod != kUsePermanentPassword;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: EdgeInsets.only(left: 12, right: 8, top: 10, bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: dark ? MyTheme.techCard.withOpacity(0.85) : null,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: dark ? MyTheme.accent.withOpacity(0.35) : Colors.transparent,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Container(
-            width: 2,
-            height: 52,
-            decoration: BoxDecoration(color: MyTheme.accent),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AutoSizeText(
-                    translate("One-time Password"),
-                    style: TextStyle(
-                        fontSize: 14, color: textColor?.withOpacity(0.5)),
-                    maxLines: 1,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onDoubleTap: () {
-                            if (showOneTime) {
-                              Clipboard.setData(
-                                  ClipboardData(text: model.serverPasswd.text));
-                              showToast(translate("Copied"));
-                            }
-                          },
-                          child: TextFormField(
-                            controller: model.serverPasswd,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding:
-                                  EdgeInsets.only(top: 14, bottom: 10),
-                            ),
-                            style: TextStyle(fontSize: 15),
-                          ).workaroundFreezeLinuxMint(),
-                        ),
-                      ),
-                      if (showOneTime)
-                        AnimatedRotationWidget(
-                          onPressed: () => bind.mainUpdateTemporaryPassword(),
-                          child: Tooltip(
-                            message: translate('Refresh Password'),
-                            child: Obx(() => RotatedBox(
-                                quarterTurns: 2,
-                                child: Icon(
-                                  Icons.refresh,
-                                  color: refreshHover.value
-                                      ? textColor
-                                      : textColor?.withOpacity(0.55),
-                                  size: 22,
-                                ))),
-                          ),
-                          onHover: (value) => refreshHover.value = value,
-                        ).marginOnly(right: 8, top: 4),
-                      if (!bind.isDisableSettings())
-                        InkWell(
-                          child: Tooltip(
-                            message: translate('Change Password'),
-                            child: Obx(
-                              () => Icon(
-                                Icons.edit,
-                                color: editHover.value
-                                    ? textColor
-                                    : textColor?.withOpacity(0.55),
-                                size: 22,
-                              ).marginOnly(right: 8, top: 4),
-                            ),
-                          ),
-                          onTap: () => DesktopSettingPage.switch2page(
-                              SettingsTabKey.safety),
-                          onHover: (value) => editHover.value = value,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  buildTip(BuildContext context) {
-    final isOutgoingOnly = bind.isOutgoingOnly();
-    return Padding(
-      padding:
-          const EdgeInsets.only(left: 20.0, right: 16, top: 16.0, bottom: 5),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
+          AutoSizeText(
+            label,
+            maxLines: 1,
+            style: TextStyle(fontSize: 13, color: muted),
+          ),
+          Row(
             children: [
-              if (!isOutgoingOnly)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    translate("Your Desktop"),
-                    style: Theme.of(context).textTheme.titleLarge,
+              Expanded(
+                child: TextFormField(
+                  controller: controller,
+                  readOnly: true,
+                  decoration: const InputDecoration.collapsed(hintText: ''),
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
-                ),
+                ).workaroundFreezeLinuxMint(),
+              ),
+              ...actions,
             ],
           ),
-          SizedBox(
-            height: 10.0,
-          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildIDBoard(BuildContext context) {
+    final model = gFFI.serverModel;
+    return _infoCard(
+      label: translate("ID"),
+      controller: model.serverId,
+      fontSize: 22,
+      actions: [
+        _actionIcon(Icons.copy_rounded, 'Copy to clipboard', () => _copy(model.serverId.text)),
+        _actionIcon(Icons.settings_outlined, 'Settings',
+            DesktopTabPage.onAddSetting),
+      ],
+    );
+  }
+
+  Widget buildPasswordBoard(BuildContext context) {
+    return Consumer<ServerModel>(
+      builder: (context, model, child) {
+        final showOneTime = model.approveMode != 'click' &&
+            model.verificationMethod != kUsePermanentPassword;
+        return _infoCard(
+          label: translate("One-time Password"),
+          controller: model.serverPasswd,
+          fontSize: 18,
+          actions: [
+            if (showOneTime)
+              _actionIcon(Icons.copy_rounded, 'Copy to clipboard',
+                  () => _copy(model.serverPasswd.text)),
+            if (showOneTime)
+              _actionIcon(Icons.refresh_rounded, 'Refresh Password',
+                  () => bind.mainUpdateTemporaryPassword()),
+            if (!bind.isDisableSettings())
+              _actionIcon(Icons.edit_outlined, 'Change Password',
+                  () => DesktopSettingPage.switch2page(SettingsTabKey.safety)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget buildTip(BuildContext context) {
+    final isOutgoingOnly = bind.isOutgoingOnly();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           if (!isOutgoingOnly)
             Text(
-              translate("desk_tip"),
-              overflow: TextOverflow.clip,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          if (isOutgoingOnly)
-            Text(
-              translate("outgoing_only_desk_tip"),
-              overflow: TextOverflow.clip,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+              translate("Your Desktop"),
+              style: Theme.of(context).textTheme.titleLarge,
+            ).marginOnly(bottom: 8),
+          Text(
+            translate(isOutgoingOnly ? "outgoing_only_desk_tip" : "desk_tip"),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
       ),
     );
@@ -535,22 +367,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           bind.mainIsInstalledDaemon(prompt: true);
         });
       }
-      //// Disable microphone configuration for macOS. We will request the permission when needed.
-      // else if ((await osxCanRecordAudio() !=
-      //     PermissionAuthorizeType.authorized)) {
-      //   return buildInstallCard("Permissions", "config_microphone", "Configure",
-      //       () async {
-      //     osxRequestAudio();
-      //     watchIsCanRecordAudio = true;
-      //   });
-      // }
     } else if (isLinux) {
       if (bind.isOutgoingOnly()) {
         return Container();
       }
       final LinuxCards = <Widget>[];
       if (bind.isSelinuxEnforcing()) {
-        // Check is SELinux enforcing, but show user a tip of is SELinux enabled for simple.
         final keyShowSelinuxHelpTip = "show-selinux-help-tip";
         if (bind.mainGetLocalOption(key: keyShowSelinuxHelpTip) != 'N') {
           LinuxCards.add(buildInstallCard(
@@ -591,8 +413,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         alignment: Alignment.centerRight,
         child: OutlinedButton(
           onPressed: () {
-            SystemNavigator.pop(); // Close the application
-            // https://github.com/flutter/flutter/issues/66631
+            SystemNavigator.pop();
+            // SystemNavigator.pop does not exit on Windows: flutter/flutter#66631
             if (isWindows) {
               exit(0);
             }
@@ -618,110 +440,67 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     void closeCard() async {
       if (closeOption != null) {
         await bind.mainSetLocalOption(key: closeOption, value: 'N');
-        if (bind.mainGetLocalOption(key: closeOption) == 'N') {
-          setState(() {
-            isCardClosed = true;
-          });
-        }
-      } else {
-        setState(() {
-          isCardClosed = true;
-        });
+        if (bind.mainGetLocalOption(key: closeOption) != 'N') return;
       }
+      setState(() => isCardClosed = true);
     }
 
-    return Stack(
-      children: [
-        Container(
-          margin: EdgeInsets.fromLTRB(
-              0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
-          child: Container(
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
-                ],
-              )),
-              padding: EdgeInsets.all(20),
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: (title.isNotEmpty
-                          ? <Widget>[
-                              Center(
-                                  child: Text(
-                                translate(title),
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15),
-                              ).marginOnly(bottom: 6)),
-                            ]
-                          : <Widget>[]) +
-                      <Widget>[
-                        if (content.isNotEmpty)
-                          Text(
-                            translate(content),
-                            style: TextStyle(
-                                height: 1.5,
-                                color: Colors.white,
-                                fontWeight: FontWeight.normal,
-                                fontSize: 13),
-                          ).marginOnly(bottom: 20)
-                      ] +
-                      (btnText.isNotEmpty
-                          ? <Widget>[
-                              Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    FixedWidthButton(
-                                      width: 150,
-                                      padding: 8,
-                                      isOutline: true,
-                                      text: translate(btnText),
-                                      textColor: Colors.white,
-                                      borderColor: Colors.white,
-                                      textSize: 20,
-                                      radius: 10,
-                                      onTap: onPressed,
-                                    )
-                                  ])
-                            ]
-                          : <Widget>[]) +
-                      (help != null
-                          ? <Widget>[
-                              Center(
-                                  child: InkWell(
-                                      onTap: () async =>
-                                          await launchUrl(Uri.parse(link!)),
-                                      child: Text(
-                                        translate(help),
-                                        style: TextStyle(
-                                            decoration:
-                                                TextDecoration.underline,
-                                            color: Colors.white,
-                                            fontSize: 12),
-                                      )).marginOnly(top: 6)),
-                            ]
-                          : <Widget>[]))),
-        ),
-        if (closeButton != null && closeButton == true)
-          Positioned(
-            top: 18,
-            right: 0,
-            child: IconButton(
-              icon: Icon(
-                Icons.close,
-                color: Colors.white,
-                size: 20,
+    final bodyStyle = Theme.of(context).textTheme.bodySmall;
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+          12, marginTop, 12, bind.isIncomingOnly() ? marginTop : 0),
+      padding: const EdgeInsets.fromLTRB(14, 12, 6, 14),
+      decoration: BoxDecoration(
+        color: MyTheme.accent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MyTheme.accent.withOpacity(0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 18, color: MyTheme.accent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  translate(title.isNotEmpty ? title : 'Prompt'),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14),
+                ),
               ),
-              onPressed: closeCard,
-            ),
+              if (closeButton == true)
+                IconButton(
+                  icon: const Icon(Icons.close, size: 16),
+                  splashRadius: 16,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints.tightFor(width: 28, height: 28),
+                  onPressed: closeCard,
+                ),
+            ],
           ),
-      ],
+          if (content.isNotEmpty)
+            Text(translate(content), style: bodyStyle?.copyWith(height: 1.5))
+                .marginOnly(top: 6, right: 8),
+          if (btnText.isNotEmpty)
+            SizedBox(
+              width: double.infinity,
+              height: 34,
+              child: ElevatedButton(
+                onPressed: onPressed,
+                child: Text(translate(btnText)),
+              ),
+            ).marginOnly(top: 12, right: 8),
+          if (help != null && link != null)
+            Center(
+              child: TextButton(
+                onPressed: () => launchUrl(Uri.parse(link)),
+                child: Text(translate(help)),
+              ),
+            ).marginOnly(top: 4),
+        ],
+      ),
     );
   }
 
@@ -740,41 +519,19 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         svcStopped.value = v;
         setState(() {});
       }
-      if (watchIsCanScreenRecording) {
-        if (bind.mainIsCanScreenRecording(prompt: false)) {
-          watchIsCanScreenRecording = false;
-          setState(() {});
-        }
+      if (watchIsCanScreenRecording &&
+          bind.mainIsCanScreenRecording(prompt: false)) {
+        watchIsCanScreenRecording = false;
+        setState(() {});
       }
-      if (watchIsProcessTrust) {
-        if (bind.mainIsProcessTrusted(prompt: false)) {
-          watchIsProcessTrust = false;
-          setState(() {});
-        }
+      if (watchIsProcessTrust && bind.mainIsProcessTrusted(prompt: false)) {
+        watchIsProcessTrust = false;
+        setState(() {});
       }
-      if (watchIsInputMonitoring) {
-        if (bind.mainIsCanInputMonitoring(prompt: false)) {
-          watchIsInputMonitoring = false;
-          // Do not notify for now.
-          // Monitoring may not take effect until the process is restarted.
-          // rustDeskWinManager.call(
-          //     WindowType.RemoteDesktop, kWindowDisableGrabKeyboard, '');
-          setState(() {});
-        }
-      }
-      if (watchIsCanRecordAudio) {
-        if (isMacOS) {
-          Future.microtask(() async {
-            if ((await osxCanRecordAudio() ==
-                PermissionAuthorizeType.authorized)) {
-              watchIsCanRecordAudio = false;
-              setState(() {});
-            }
-          });
-        } else {
-          watchIsCanRecordAudio = false;
-          setState(() {});
-        }
+      if (watchIsInputMonitoring &&
+          bind.mainIsCanInputMonitoring(prompt: false)) {
+        watchIsInputMonitoring = false;
+        setState(() {});
       }
     });
     Get.put<RxBool>(svcStopped, tag: 'stop-service');
@@ -932,7 +689,6 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
     DigitValidationRule(),
     UppercaseValidationRule(),
     LowercaseValidationRule(),
-    // SpecialCharacterValidationRule(),
     MinCharactersValidationRule(8),
   ];
   final maxLength = bind.mainMaxEncryptLen();
