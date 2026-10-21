@@ -813,5 +813,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("shortcut-key-not-supported", ""),
         ("On", ""),
         ("Off", ""),
+        ("The connection failed because the public server requires both devices to log in with the same account. Open Settings, then Account, sign in on each device, and try again.", "連線失敗：官方公網伺服器要求兩邊使用同一個帳號登入後才能連通。請打開「設定」→「帳戶」，在兩台裝置上登入同一帳號後再試。"),
     ].iter().cloned().collect();
 }
