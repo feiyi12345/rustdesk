@@ -28,11 +28,11 @@ const SIGNATURE_SCHEMA_VERSION: u32 = 1;
 const SIGNATURE_ALGORITHM: &str = "ed25519";
 
 const TRUSTED_UPDATE_KEYS: &[TrustedUpdateKey] = &[TrustedUpdateKey {
-    key_id: "2026-ed25519-main",
+    key_id: "wuxian-2026-ed25519",
     algorithm: SIGNATURE_ALGORITHM,
     public_key: [
-        118, 252, 116, 215, 49, 217, 220, 109, 145, 119, 210, 101, 225, 198, 63, 2, 41, 127, 197,
-        127, 52, 251, 6, 204, 125, 117, 96, 204, 187, 166, 85, 59,
+        98, 233, 240, 169, 51, 75, 50, 42, 172, 39, 117, 192, 123, 21, 205, 32, 230, 181, 82, 159,
+        10, 65, 48, 196, 99, 12, 171, 150, 132, 228, 89, 71,
     ],
 }];
 

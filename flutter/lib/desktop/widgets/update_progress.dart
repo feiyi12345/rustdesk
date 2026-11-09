@@ -9,6 +9,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 const _eventKeyUpdateMe = 'update-me';
 
+/// Direct installer link on the update feed, whose release URLs have no page.
+String updateInstallerUrl(String releaseUrl) =>
+    '$releaseUrl/WuxianRemote-${bind.mainGetNewVersion()}-x64-setup.exe';
+
 Future<void> _handleUpdateMe(
     String releasePageUrl, Map<String, dynamic> evt) async {
   platformFFI.unregisterEventHandler(_eventKeyUpdateMe, _eventKeyUpdateMe);
@@ -100,7 +104,7 @@ void _showUpdateError(String releasePageUrl, String error) {
   debugPrint('Update error: $error');
   gFFI.dialogManager.dismissAll();
   msgBox(gFFI.sessionId, 'custom-nocancel-nook-hasclose', 'Error', error,
-      releasePageUrl, gFFI.dialogManager);
+      updateInstallerUrl(releasePageUrl), gFFI.dialogManager);
 }
 
 class UpdateProgress extends StatefulWidget {
@@ -182,7 +186,7 @@ class UpdateProgressState extends State<UpdateProgress> {
     }
 
     jumplink() {
-      launchUrl(Uri.parse(releasePageUrl));
+      launchUrl(Uri.parse(updateInstallerUrl(releasePageUrl)));
       dialogManager.dismissAll();
     }
 
@@ -295,10 +299,10 @@ class UpdateProgressState extends State<UpdateProgress> {
         : (_totalSize == 0 ? 1.0 : _downloadedSize / _totalSize!);
     return LinearProgressIndicator(
       value: getValue(),
-      minHeight: 20,
+      minHeight: 10,
       borderRadius: BorderRadius.circular(5),
-      backgroundColor: Colors.grey[300],
-      valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+      backgroundColor: MyTheme.accent.withOpacity(0.15),
+      valueColor: const AlwaysStoppedAnimation<Color>(MyTheme.accent),
     );
   }
 }

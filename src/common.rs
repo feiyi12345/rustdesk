@@ -1020,7 +1020,21 @@ pub fn check_software_update() {
     }
 }
 
+/// Returns the release id if `update_url` is a release on this fork's update feed.
+pub(crate) fn release_id_from_feed_url(update_url: &str) -> Option<&str> {
+    let rest = update_url
+        .strip_prefix(UPDATE_FEED_BASE)?
+        .strip_prefix('/')?;
+    let release_id = rest.strip_suffix('/').unwrap_or(rest);
+    display_version_from_release_id(release_id)
+        .is_ok()
+        .then_some(release_id)
+}
+
 pub(crate) fn release_id_from_update_url(update_url: &str) -> ResultType<String> {
+    if let Some(release_id) = release_id_from_feed_url(update_url) {
+        return Ok(release_id.to_owned());
+    }
     let url = url::Url::parse(update_url)?;
     if url.scheme() != "https" || url.host_str() != Some("github.com") {
         bail!(
@@ -1127,25 +1141,23 @@ fn process_software_update_check_response(bytes: Bytes) -> ResultType<()> {
 }
 
 // No need to check `danger_accept_invalid_cert` for now.
-// Because the url is always `https://api.rustdesk.com/version/latest`.
+// Because the url is always this fork's own feed.
 #[tokio::main(flavor = "current_thread")]
 pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
-    let (request, url) =
-        hbb_common::version_check_request(hbb_common::VER_TYPE_RUSTDESK_CLIENT.to_string());
+    let url = format!("{UPDATE_FEED_BASE}/latest.json");
     let proxy_conf = Config::get_socks();
     let tls_url = get_url_for_tls(&url, &proxy_conf);
     let tls_type = get_cached_tls_type(tls_url);
     let is_tls_not_cached = tls_type.is_none();
     let tls_type = tls_type.unwrap_or(TlsType::Rustls);
     let client = create_http_client_async(tls_type, false);
-    let latest_release_response: ResultType<_> = match client.post(&url).json(&request).send().await
-    {
+    let latest_release_response: ResultType<_> = match client.get(&url).send().await {
         Ok(resp) => Ok((tls_type, resp)),
         Err(err) => {
             if is_tls_not_cached && err.is_request() {
                 let tls_type = TlsType::NativeTls;
                 let client = create_http_client_async(tls_type, false);
-                match client.post(&url).json(&request).send().await {
+                match client.get(&url).send().await {
                     Ok(resp) => Ok((tls_type, resp)),
                     Err(err) => Err(err.into()),
                 }
@@ -2143,7 +2155,7 @@ pub async fn get_key(sync: bool) -> String {
         options.remove("key").unwrap_or_default()
     };
     if key.is_empty() {
-        key = config::RS_PUB_KEY.to_owned();
+        key = BUILTIN_RS_PUB_KEY.to_owned();
     }
     key
 }
@@ -2477,7 +2489,32 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
     ThrottledInterval::new(i)
 }
 
+/// Built-in rendezvous/relay host for this fork. `hbb_common` is an upstream
+/// submodule this fork cannot push to, so the defaults are applied from here.
+pub const BUILTIN_RENDEZVOUS_SERVER: &str = "193.134.210.76";
+/// Public key of `BUILTIN_RENDEZVOUS_SERVER` (`id_ed25519.pub` of hbbs/hbbr).
+pub const BUILTIN_RS_PUB_KEY: &str = "EPRIuY4FHOsU7HGeArgO+wHEETEl9q97nQqdPltXiFs=";
+
+/// Update feed for this fork; `res/publish_update.js` publishes to it.
+pub const UPDATE_FEED_BASE: &str = "https://193-134-210-76.sslip.io:8443/updates/wuxian";
+
+fn apply_fork_defaults() {
+    {
+        let mut server = config::PROD_RENDEZVOUS_SERVER.write().unwrap();
+        if server.is_empty() {
+            *server = BUILTIN_RENDEZVOUS_SERVER.to_owned();
+        }
+    }
+    // Silent updates are on unless the user turns them off in settings.
+    config::DEFAULT_SETTINGS
+        .write()
+        .unwrap()
+        .entry(keys::OPTION_ALLOW_AUTO_UPDATE.to_owned())
+        .or_insert_with(|| "Y".to_owned());
+}
+
 pub fn load_custom_client() {
+    apply_fork_defaults();
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());
