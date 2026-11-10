@@ -16,6 +16,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../common.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
+import '../../desktop/widgets/compact_home.dart';
 import 'peer_card.dart';
 
 typedef PeerFilter = bool Function(Peer peer);
@@ -251,7 +252,9 @@ class _PeersViewState extends State<_PeersView>
               // and the peers change event will trigger _buildPeersView().
               return !isPortrait
                   ? Obx(() => peerCardUiType.value == PeerUiType.list
-                      ? Container(height: 45, child: visibilityChild)
+                      ? Container(
+                          height: CompactHomeScope.isActive(context) ? 56 : 45,
+                          child: visibilityChild)
                       : peerCardUiType.value == PeerUiType.grid
                           ? SizedBox(
                               width: 220, height: 140, child: visibilityChild)
