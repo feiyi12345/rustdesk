@@ -424,11 +424,11 @@ Future<void> _pumpHome(
                                       title: peer.$1,
                                       subtitle: peer.$2,
                                       online: peer.$3,
-                                      actions: CompactPeerActions(
+                                      actions: const CompactPeerActions(
                                         connectLabel: '连接',
                                         fileLabel: '传输文件',
-                                        onConnect: () {},
-                                        onFile: () {},
+                                        trailing:
+                                            Icon(Icons.more_vert, size: 18),
                                       ),
                                     );
                                   },

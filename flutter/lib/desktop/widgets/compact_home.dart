@@ -626,7 +626,12 @@ class CompactPeerActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = compactPeerActionStyle(CompactHomeColors.of(context));
+    final colors = CompactHomeColors.of(context);
+    final style = compactPeerActionStyle(context, colors);
+    final labelStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+          fontSize: 12,
+          color: colors.text,
+        );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -639,6 +644,7 @@ class CompactPeerActions extends StatelessWidget {
               connectLabel,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: labelStyle,
             ),
           ),
         ),
@@ -651,6 +657,7 @@ class CompactPeerActions extends StatelessWidget {
               fileLabel,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: labelStyle,
             ),
           ),
         ),
@@ -740,13 +747,18 @@ class CompactDeviceRow extends StatelessWidget {
   }
 }
 
-ButtonStyle compactPeerActionStyle(CompactHomeColors colors) {
+ButtonStyle compactPeerActionStyle(
+    BuildContext context, CompactHomeColors colors) {
+  final themeStyle = Theme.of(context).textTheme.labelLarge;
   return TextButton.styleFrom(
     foregroundColor: colors.text,
     minimumSize: const Size(0, 28),
     padding: const EdgeInsets.symmetric(horizontal: 6),
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     visualDensity: VisualDensity.compact,
-    textStyle: const TextStyle(fontSize: 12),
+    // A bare TextStyle here replaces the theme style, including the CJK
+    // fallback, so the action labels render as boxes.
+    textStyle:
+        themeStyle?.copyWith(fontSize: 12) ?? const TextStyle(fontSize: 12),
   );
 }
