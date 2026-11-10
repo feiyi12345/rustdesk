@@ -12,6 +12,7 @@ import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
+import '../../desktop/widgets/compact_home.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 import '../../desktop/widgets/popup_menu.dart';
 import 'dart:math' as math;
@@ -468,6 +469,44 @@ class _PeerCardState extends State<_PeerCard>
       } else {
         return icon.marginOnly(right: right);
       }
+    } else if (CompactHomeScope.isActive(context)) {
+      final colors = CompactHomeColors.of(context);
+      final style = compactPeerActionStyle(colors);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 72),
+            child: TextButton(
+              style: style,
+              onPressed: () => widget.connect(context, peer.id),
+              child: Text(
+                translate('Connect'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 88),
+            child: TextButton(
+              style: style,
+              onPressed: () => connectInPeerTab(
+                context,
+                peer,
+                widget.tab,
+                isFileTransfer: true,
+              ),
+              child: Text(
+                translate('Transfer file'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          _actionMore(peer),
+        ],
+      );
     } else {
       return _actionMore(peer);
     }

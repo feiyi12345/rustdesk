@@ -11,6 +11,7 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
+import 'package:flutter_hbb/desktop/widgets/compact_home.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
@@ -44,6 +45,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var watchIsInputMonitoring = false;
   Timer? _updateTimer;
   bool isCardClosed = false;
+  bool _maskPassword = true;
 
   final RxBool _block = false.obs;
 
@@ -53,15 +55,69 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget build(BuildContext context) {
     super.build(context);
     final isIncomingOnly = bind.isIncomingOnly();
+    if (isIncomingOnly) {
+      return _buildBlock(child: buildLeftPane(context));
+    }
+    final outgoing = bind.isOutgoingOnly();
     return _buildBlock(
-        child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        buildLeftPane(context),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
-        if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
-      ],
-    ));
+      child: ChangeNotifierProvider.value(
+        value: gFFI.serverModel,
+        child: CompactHomeScope(
+          child: CompactHomeScaffold(
+            background: CompactHomeColors.of(context).page,
+            notices: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!outgoing) buildPresetPasswordWarning(),
+                if (bind.isCustomClient())
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: loadPowered(context),
+                  ),
+                Obx(() => buildHelpCards(stateGlobal.updateUrl.value)),
+              ],
+            ),
+            body: const ConnectionPage(),
+            footer: outgoing ? null : _buildCompactFooter(context),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactFooter(BuildContext context) {
+    return Consumer<ServerModel>(
+      builder: (context, model, child) {
+        final showOneTime = model.approveMode != 'click' &&
+            model.verificationMethod != kUsePermanentPassword;
+        final raw = model.serverPasswd.text;
+        final password = CompactPasswordState.resolve(
+          showOneTime: showOneTime,
+          raw: raw,
+          serviceStopped: svcStopped.value,
+          revealed: !_maskPassword,
+        );
+        return CompactIdentityBar(
+          idLabel: translate('ID'),
+          idText: model.serverId.text,
+          copyIdTip: translate('Copy to clipboard'),
+          onCopyId: () => _copy(model.serverId.text),
+          passwordLabel: translate('One-time Password'),
+          password: password,
+          revealTip: translate('Password'),
+          onToggleReveal: () => setState(() => _maskPassword = !_maskPassword),
+          copyPasswordTip: translate('Copy to clipboard'),
+          onCopyPassword: () => _copy(password.copyText),
+          refreshTip: translate('Refresh Password'),
+          onRefreshPassword: () => bind.mainUpdateTemporaryPassword(),
+          editTip: translate('Change Password'),
+          onEditPassword: bind.isDisableSettings()
+              ? null
+              : () => DesktopSettingPage.switch2page(SettingsTabKey.safety),
+          status: const OnlineStatusWidget(),
+        );
+      },
+    );
   }
 
   Widget _buildBlock({required Widget child}) {
@@ -89,8 +145,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       Obx(() {
         final cards = buildHelpCards(stateGlobal.updateUrl.value);
         if (isIncomingOnly && isInHomePage()) {
-          Future.delayed(
-              const Duration(milliseconds: 300), _updateWindowSize);
+          Future.delayed(const Duration(milliseconds: 300), _updateWindowSize);
         }
         return cards;
       }),
@@ -152,13 +207,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ],
         ),
       ),
-    );
-  }
-
-  buildRightPane(BuildContext context) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: ConnectionPage(),
     );
   }
 
@@ -235,9 +283,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       controller: model.serverId,
       fontSize: 22,
       actions: [
-        _actionIcon(Icons.copy_rounded, 'Copy to clipboard', () => _copy(model.serverId.text)),
-        _actionIcon(Icons.settings_outlined, 'Settings',
-            DesktopTabPage.onAddSetting),
+        _actionIcon(Icons.copy_rounded, 'Copy to clipboard',
+            () => _copy(model.serverId.text)),
+        _actionIcon(
+            Icons.settings_outlined, 'Settings', DesktopTabPage.onAddSetting),
       ],
     );
   }
@@ -547,7 +596,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
     bool isChattyMethod(String methodName) {
       switch (methodName) {
-        case kWindowBumpMouse: return true;
+        case kWindowBumpMouse:
+          return true;
       }
 
       return false;
@@ -556,7 +606,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     rustDeskWinManager.setMethodHandler((call, fromWindowId) async {
       if (!isChattyMethod(call.method)) {
         debugPrint(
-          "[Main] call ${call.method} with args ${call.arguments} from window $fromWindowId");
+            "[Main] call ${call.method} with args ${call.arguments} from window $fromWindowId");
       }
       if (call.method == kWindowMainWindowOnTop) {
         windowOnTop(null);
@@ -584,9 +634,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           connToken: call.arguments['connToken'],
         );
       } else if (call.method == kWindowBumpMouse) {
-        return RdPlatformChannel.instance.bumpMouse(
-          dx: call.arguments['dx'],
-          dy: call.arguments['dy']);
+        return RdPlatformChannel.instance
+            .bumpMouse(dx: call.arguments['dx'], dy: call.arguments['dy']);
       } else if (call.method == kWindowEventMoveTabToNewWindow) {
         final args = call.arguments.split(',');
         int? windowId;

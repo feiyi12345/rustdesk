@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Glyph only. Tray and template images rasterize this at 16, 24, and 32. -->
+  <g fill="none" stroke="#111111" stroke-width="32" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M68 164 V76 H164 V116"/>
+    <path d="M188 92 V180 H92 V140"/>
+  </g>
+</svg>

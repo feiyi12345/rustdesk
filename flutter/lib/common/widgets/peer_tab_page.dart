@@ -11,6 +11,7 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
 import 'package:flutter_hbb/desktop/widgets/material_mod_popup_menu.dart'
     as mod_menu;
+import 'package:flutter_hbb/desktop/widgets/compact_home.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/models/ab_model.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
@@ -101,16 +102,20 @@ class _PeerTabPageState extends State<PeerTabPage>
   @override
   Widget build(BuildContext context) {
     final model = Provider.of<PeerTabModel>(context);
+    final compact = CompactHomeScope.isActive(context);
     Widget selectionWrap(Widget widget) {
       return model.multiSelectionMode ? createMultiSelectionBar(model) : widget;
     }
+
+    final switchBar = visibleContextMenuListener(_createSwitchBar(context));
+    final colors = compact ? CompactHomeColors.of(context) : null;
 
     return Column(
       textBaseline: TextBaseline.ideographic,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Obx(() => SizedBox(
-              height: 32,
+              height: compact ? 36 : 32,
               child: Container(
                 padding: stateGlobal.isPortrait.isTrue
                     ? EdgeInsets.symmetric(horizontal: 2)
@@ -119,8 +124,20 @@ class _PeerTabPageState extends State<PeerTabPage>
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
-                        child: visibleContextMenuListener(
-                            _createSwitchBar(context))),
+                      child: compact
+                          ? DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: colors!.field,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: colors.line),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: switchBar,
+                              ),
+                            )
+                          : switchBar,
+                    ),
                     if (stateGlobal.isPortrait.isTrue)
                       ..._portraitRightActions(context)
                     else
@@ -128,7 +145,8 @@ class _PeerTabPageState extends State<PeerTabPage>
                   ],
                 )),
               ),
-            ).paddingOnly(right: stateGlobal.isPortrait.isTrue ? 0 : 12)),
+            ).paddingOnly(
+                right: compact || stateGlobal.isPortrait.isTrue ? 0 : 12)),
         _createPeersView(),
       ],
     );
@@ -136,12 +154,15 @@ class _PeerTabPageState extends State<PeerTabPage>
 
   Widget _createSwitchBar(BuildContext context) {
     final model = Provider.of<PeerTabModel>(context);
+    final compact = CompactHomeScope.isActive(context);
     var counter = -1;
     return ReorderableListView(
         buildDefaultDragHandles: false,
         onReorder: model.reorder,
         scrollDirection: Axis.horizontal,
-        physics: NeverScrollableScrollPhysics(),
+        physics: compact
+            ? const ClampingScrollPhysics()
+            : const NeverScrollableScrollPhysics(),
         children: model.visibleEnabledOrderedIndexs.map((t) {
           final selected = model.currentTab == t;
           final color = selected
@@ -160,29 +181,71 @@ class _PeerTabPageState extends State<PeerTabPage>
           return ReorderableDragStartListener(
               key: ValueKey(t),
               index: counter,
-              child: Obx(() => Tooltip(
-                    preferBelow: false,
-                    message: model.tabTooltip(t),
-                    onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
-                    child: InkWell(
-                      child: Container(
-                        decoration: (hover.value
-                            ? (selected ? decoBorder : deco)
-                            : (selected ? decoBorder : null)),
-                        child: Icon(model.tabIcon(t), color: color)
-                            .paddingSymmetric(horizontal: 4),
-                      ).paddingSymmetric(horizontal: 4),
-                      onTap: isOptionFixed(kOptionPeerTabIndex)
-                          ? null
-                          : () async {
-                              await handleTabSelection(t);
-                              await bind.setLocalFlutterOption(
-                                  k: kOptionPeerTabIndex, v: t.toString());
-                            },
-                      onHover: (value) => hover.value = value,
-                    ),
-                  )));
+              child: compact
+                  ? _compactTabLabel(context, model, t, selected)
+                  : Obx(() => Tooltip(
+                        preferBelow: false,
+                        message: model.tabTooltip(t),
+                        onTriggered:
+                            isMobile ? mobileShowTabVisibilityMenu : null,
+                        child: InkWell(
+                          child: Container(
+                            decoration: (hover.value
+                                ? (selected ? decoBorder : deco)
+                                : (selected ? decoBorder : null)),
+                            child: Icon(model.tabIcon(t), color: color)
+                                .paddingSymmetric(horizontal: 4),
+                          ).paddingSymmetric(horizontal: 4),
+                          onTap: isOptionFixed(kOptionPeerTabIndex)
+                              ? null
+                              : () async {
+                                  await handleTabSelection(t);
+                                  await bind.setLocalFlutterOption(
+                                      k: kOptionPeerTabIndex, v: t.toString());
+                                },
+                          onHover: (value) => hover.value = value,
+                        ),
+                      )));
         }).toList());
+  }
+
+  Widget _compactTabLabel(
+      BuildContext context, PeerTabModel model, int index, bool selected) {
+    final colors = CompactHomeColors.of(context);
+    return Tooltip(
+      message: model.tabTooltip(index),
+      child: InkWell(
+        onTap: isOptionFixed(kOptionPeerTabIndex)
+            ? null
+            : () async {
+                await handleTabSelection(index);
+                await bind.setLocalFlutterOption(
+                    k: kOptionPeerTabIndex, v: index.toString());
+              },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: selected ? colors.raised : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                translate(PeerTabModel.tabNames[index]),
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  color: selected ? colors.text : colors.muted,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _createPeersView() {

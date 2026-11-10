@@ -299,19 +299,28 @@ async fn start_query_session_count(sender: std::sync::mpsc::Sender<Data>) {
 }
 
 fn load_icon_from_asset() -> Option<image::DynamicImage> {
-    let Some(path) = std::env::current_exe().map_or(None, |x| x.parent().map(|x| x.to_path_buf()))
+    let Some(dir) = std::env::current_exe().ok().and_then(|x| x.parent().map(|x| x.to_path_buf()))
     else {
         return None;
     };
     #[cfg(target_os = "macos")]
-    let path = path.join("../Frameworks/App.framework/Resources/flutter_assets/assets/icon.png");
+    let dir = dir.join("../Frameworks/App.framework/Resources/flutter_assets/assets");
     #[cfg(windows)]
-    let path = path.join(r"data\flutter_assets\assets\icon.png");
+    let dir = dir.join(r"data\flutter_assets\assets");
     #[cfg(target_os = "linux")]
-    let path = path.join(r"data/flutter_assets/assets/icon.png");
-    if path.exists() {
-        if let Ok(image) = image::open(path) {
-            return Some(image);
+    let dir = dir.join("data/flutter_assets/assets");
+    // macOS keeps the template glyph fallback. Other trays prefer the
+    // 32px asset drawn at that size, then the full app icon.
+    #[cfg(target_os = "macos")]
+    let names = ["icon.png"];
+    #[cfg(not(target_os = "macos"))]
+    let names = ["tray_icon.png", "icon.png"];
+    for name in names {
+        let path = dir.join(name);
+        if path.exists() {
+            if let Ok(image) = image::open(path) {
+                return Some(image);
+            }
         }
     }
     None
