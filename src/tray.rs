@@ -314,7 +314,9 @@ fn load_icon_from_asset() -> Option<image::DynamicImage> {
     // macOS paints the tray with with_icon_as_template, which keeps alpha and
     // drops color. The app tile in icon.png is almost fully opaque, so it
     // becomes a solid rounded square. Only the transparent glyph is valid.
-    // Other platforms load the small tray bitmap, not a scaled 256 tile.
+    // Windows and Linux load tray_icon.png: a 32px plate with the cream
+    // hooks, so the mark stays visible on a light or dark taskbar. They do
+    // not load the bare near-white glyph.
     #[cfg(target_os = "macos")]
     let names = ["tray_glyph.png"];
     #[cfg(not(target_os = "macos"))]

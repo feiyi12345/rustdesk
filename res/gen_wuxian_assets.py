@@ -95,6 +95,52 @@ def pixel_glyph(size, color):
     return base.resize((size, size), Image.Resampling.NEAREST)
 
 
+def _in_round_rect(x, y, size, radius):
+    if radius <= 0:
+        return True
+    corners = (
+        (radius - 1, radius - 1),
+        (size - radius, radius - 1),
+        (radius - 1, size - radius),
+        (size - radius, size - radius),
+    )
+    for cx, cy in corners:
+        if (x < radius and y < radius and (cx, cy) == corners[0]) or (
+            x >= size - radius and y < radius and (cx, cy) == corners[1]
+        ) or (x < radius and y >= size - radius and (cx, cy) == corners[2]) or (
+            x >= size - radius and y >= size - radius and (cx, cy) == corners[3]
+        ):
+            if (x - cx) ** 2 + (y - cy) ** 2 > radius * radius:
+                return False
+    return True
+
+
+def plated_tray(size):
+    """Charcoal plate plus cream hooks. Visible on light and dark taskbars.
+
+    32 is an exact 2x of the 16px plate. 24 keeps that 16px plate centered
+    so the stroke stays on whole pixels.
+    """
+    if size == 32:
+        return plated_tray(16).resize((32, 32), Image.Resampling.NEAREST)
+    if size == 24:
+        canvas = Image.new("RGBA", (24, 24), (0, 0, 0, 0))
+        plate = plated_tray(16)
+        canvas.paste(plate, (4, 4), plate)
+        return canvas
+    glyph = _glyph16((244, 240, 230, 255))
+    plate = (44, 46, 50, 255)
+    image = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    px = image.load()
+    src = glyph.load()
+    for y in range(16):
+        for x in range(16):
+            if not _in_round_rect(x, y, 16, 3):
+                continue
+            px[x, y] = src[x, y] if src[x, y][3] > 16 else plate
+    return image
+
+
 def opaque_ratio(image: Image.Image) -> float:
     pixels = list(image.getdata())
     return sum(1 for px in pixels if px[3] > 16) / float(len(pixels) or 1)
@@ -105,13 +151,12 @@ def main():
     for size in (16, 24, 32, 48, 64, 128, 256, 1024):
         full[size] = render_svg(SVG, size)
     black = (0, 0, 0, 255)
-    cream = (244, 240, 230, 255)
     mac_glyph = {s: pixel_glyph(s, black) for s in (16, 32, 64)}
-    win_glyph = {s: pixel_glyph(s, cream) for s in (16, 24, 32)}
-    for image in list(mac_glyph.values()) + list(win_glyph.values()):
+    win_glyph = {s: plated_tray(s) for s in (16, 24, 32)}
+    for image in mac_glyph.values():
         ratio = opaque_ratio(image)
         if ratio > 0.45:
-            raise SystemExit(f"tray glyph is too opaque ({ratio:.2%})")
+            raise SystemExit(f"macOS tray glyph is too opaque ({ratio:.2%})")
 
     exe_sizes = [full[s] for s in (16, 24, 32, 48, 64, 128, 256)]
     for target in (
@@ -139,26 +184,25 @@ def main():
     for name in ("logo.png", "logo_dark.png", "logo_light.png"):
         composite_wordmark(ROOT / "flutter" / "assets" / name, full[256])
 
-    sheet = Image.new("RGB", (900, 220), (190, 190, 190))
-    x = 16
-    for image, scale in (
-        (win_glyph[16], 8),
-        (win_glyph[24], 4),
-        (win_glyph[32], 4),
-        (mac_glyph[64], 2),
-    ):
-        tile = image.resize(
-            (image.width * scale, image.height * scale), Image.Resampling.NEAREST
-        )
-        sheet.paste(tile, (x, 24), tile.split()[-1])
-        x += tile.width + 16
-    preview = Path("/opt/cursor/artifacts/wuxian-icon-preview.png")
-    preview.parent.mkdir(parents=True, exist_ok=True)
-    sheet.save(preview)
+    # Actual Windows/Linux frames on white and near-black, nearest-neighbor
+    # enlarged so the 16px grid stays visible.
+    contrast = Image.new("RGB", (16 * 8 * 3 + 80, 16 * 8 * 2 + 48), (80, 80, 80))
+    for row, bg in enumerate(((255, 255, 255), (22, 22, 24))):
+        x = 16
+        for size in (16, 24, 32):
+            scale = 128 // size
+            tile = win_glyph[size].resize(
+                (size * scale, size * scale), Image.Resampling.NEAREST
+            )
+            cell = Image.new("RGB", tile.size, bg)
+            cell.paste(tile, mask=tile.split()[-1])
+            contrast.paste(cell, (x, 16 + row * (128 + 16)))
+            x += 128 + 16
+    contrast_path = Path("/opt/cursor/artifacts/tray-icon-contrast.png")
+    contrast.save(contrast_path)
+    print("wrote", contrast_path)
+    Path("/opt/cursor/artifacts").mkdir(parents=True, exist_ok=True)
     full[256].save("/opt/cursor/artifacts/wuxian-icon-256.png")
-    full[32].save("/opt/cursor/artifacts/wuxian-icon-32.png")
-    full[16].save("/opt/cursor/artifacts/wuxian-icon-16.png")
-    print("wrote", preview)
 
 
 if __name__ == "__main__":
