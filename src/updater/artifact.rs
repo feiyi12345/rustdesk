@@ -1,5 +1,8 @@
 use crate::{
-    common::{display_version_from_release_id, release_id_from_update_url},
+    common::{
+        display_version_from_release_id, release_id_from_feed_url, release_id_from_update_url,
+        UPDATE_FEED_BASE,
+    },
     hbbs_http::create_http_client_with_url_strict,
     update_metadata::{UpdateArtifactQuery, UpdateMetadataRequirements, VerifiedUpdateArtifact},
 };
@@ -106,8 +109,11 @@ pub(super) fn verified_update_artifact_from_release_page_url(
 ) -> ResultType<VerifiedUpdateArtifact> {
     let release_id = release_id_from_update_url(update_url)?;
     let display_version = display_version_from_release_id(&release_id)?;
-    let expected_artifact_url_prefix =
-        format!("https://github.com/rustdesk/rustdesk/releases/download/{release_id}/");
+    let expected_artifact_url_prefix = if release_id_from_feed_url(update_url).is_some() {
+        format!("{UPDATE_FEED_BASE}/{release_id}/")
+    } else {
+        format!("https://github.com/rustdesk/rustdesk/releases/download/{release_id}/")
+    };
     let metadata_url = format!("{expected_artifact_url_prefix}rustdesk-update.json");
     let signature_url = format!("{metadata_url}.sig");
     let metadata_bytes = fetch_update_sidecar_bytes(&metadata_url)?;
@@ -154,7 +160,25 @@ fn read_limited_response_bytes<R: Read>(
     Ok(bytes)
 }
 
+fn update_feed_download_file(url: &str) -> Option<PathBuf> {
+    let rest = url.strip_prefix(UPDATE_FEED_BASE)?.strip_prefix('/')?;
+    let (release_id, filename) = rest.split_once('/')?;
+    let valid_chars = filename
+        .bytes()
+        .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'));
+    if display_version_from_release_id(release_id).is_err()
+        || !valid_chars
+        || !is_plain_update_filename(filename)
+    {
+        return None;
+    }
+    Some(std::env::temp_dir().join(filename))
+}
+
 pub fn get_update_download_file_from_url(url: &str) -> Option<PathBuf> {
+    if url.starts_with(UPDATE_FEED_BASE) {
+        return update_feed_download_file(url);
+    }
     let parsed = url::Url::parse(url).ok()?;
     // Check the raw prefix before Url normalizes default ports.
     if !url.starts_with("https://github.com/")

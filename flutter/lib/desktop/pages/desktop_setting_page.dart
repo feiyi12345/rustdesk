@@ -2676,7 +2676,8 @@ Widget _Card(
                       translate(title),
                       textAlign: TextAlign.start,
                       style: const TextStyle(
-                        fontSize: _kTitleFontSize,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     )),
                     ...?title_suffix

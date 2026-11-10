@@ -278,18 +278,25 @@ class _ConnectionPageState extends State<ConnectionPage>
   }
 
   Widget _buildRemoteIDTextField(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     var w = Container(
       width: 400,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          border: Border.all(color: MyTheme.accent.withOpacity(0.45)),
+          color: dark ? MyTheme.techCard : Colors.white,
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
+          border: Border.all(
+            color: dark
+                ? MyTheme.accent.withOpacity(0.35)
+                : Theme.of(context).dividerColor,
+          ),
           boxShadow: [
-            BoxShadow(
-              color: MyTheme.accent.withOpacity(0.16),
-              blurRadius: 18,
-              spreadRadius: -6,
-            ),
+            if (dark)
+              BoxShadow(
+                color: MyTheme.accent.withOpacity(0.12),
+                blurRadius: 18,
+                spreadRadius: -6,
+              ),
           ]),
       child: Ink(
         child: Column(
@@ -421,7 +428,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                             ],
                           ),
                           child: ClipRRect(
-                              borderRadius: BorderRadius.circular(5),
+                              borderRadius: BorderRadius.circular(10),
                               child: Material(
                                 elevation: 4,
                                 child: ConstrainedBox(
