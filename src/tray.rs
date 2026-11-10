@@ -43,7 +43,9 @@ fn make_tray() -> hbb_common::ResultType<()> {
     let icon;
     #[cfg(target_os = "macos")]
     {
-        icon = include_bytes!("../res/mac-tray-dark-x2.png"); // use as template, so color is not important
+        // Template icons use alpha only. This file is a transparent glyph,
+        // matching flutter_assets/assets/tray_glyph.png.
+        icon = include_bytes!("../res/mac-tray-dark-x2.png");
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -309,12 +311,14 @@ fn load_icon_from_asset() -> Option<image::DynamicImage> {
     let dir = dir.join(r"data\flutter_assets\assets");
     #[cfg(target_os = "linux")]
     let dir = dir.join("data/flutter_assets/assets");
-    // macOS keeps the template glyph fallback. Other trays prefer the
-    // 32px asset drawn at that size, then the full app icon.
+    // macOS paints the tray with with_icon_as_template, which keeps alpha and
+    // drops color. The app tile in icon.png is almost fully opaque, so it
+    // becomes a solid rounded square. Only the transparent glyph is valid.
+    // Other platforms load the small tray bitmap, not a scaled 256 tile.
     #[cfg(target_os = "macos")]
-    let names = ["icon.png"];
+    let names = ["tray_glyph.png"];
     #[cfg(not(target_os = "macos"))]
-    let names = ["tray_icon.png", "icon.png"];
+    let names = ["tray_icon.png"];
     for name in names {
         let path = dir.join(name);
         if path.exists() {

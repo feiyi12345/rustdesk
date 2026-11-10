@@ -296,23 +296,85 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       builder: (context, model, child) {
         final showOneTime = model.approveMode != 'click' &&
             model.verificationMethod != kUsePermanentPassword;
-        return _infoCard(
-          label: translate("One-time Password"),
-          controller: model.serverPasswd,
-          fontSize: 18,
-          actions: [
-            if (showOneTime)
-              _actionIcon(Icons.copy_rounded, 'Copy to clipboard',
-                  () => _copy(model.serverPasswd.text)),
-            if (showOneTime)
-              _actionIcon(Icons.refresh_rounded, 'Refresh Password',
-                  () => bind.mainUpdateTemporaryPassword()),
-            if (!bind.isDisableSettings())
-              _actionIcon(Icons.edit_outlined, 'Change Password',
-                  () => DesktopSettingPage.switch2page(SettingsTabKey.safety)),
-          ],
+        final raw = model.serverPasswd.text;
+        final password = CompactPasswordState.resolve(
+          showOneTime: showOneTime,
+          raw: raw,
+          serviceStopped: svcStopped.value,
+          revealed: !_maskPassword,
+        );
+        return _maskedCard(
+          label: translate('One-time Password'),
+          value: incomingPasswordVisibleText(password, raw),
+          actions: CompactPasswordActions(
+            password: password,
+            showLabel: false,
+            passwordLabel: '',
+            revealTip: translate('Password'),
+            onToggleReveal: () =>
+                setState(() => _maskPassword = !_maskPassword),
+            copyTip: translate('Copy to clipboard'),
+            onCopy: () => _copy(password.copyText),
+            refreshTip: translate('Refresh Password'),
+            onRefresh: () => bind.mainUpdateTemporaryPassword(),
+            editTip: translate('Change Password'),
+            onEdit: bind.isDisableSettings()
+                ? null
+                : () => DesktopSettingPage.switch2page(SettingsTabKey.safety),
+          ),
         );
       },
+    );
+  }
+
+  Widget _maskedCard({
+    required String label,
+    required String value,
+    required Widget actions,
+  }) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+      decoration: BoxDecoration(
+        color: dark ? MyTheme.techCard : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: dark
+              ? MyTheme.accent.withOpacity(0.35)
+              : Theme.of(context).dividerColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AutoSizeText(
+            label,
+            maxLines: 1,
+            style: TextStyle(fontSize: 13, color: muted),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  value,
+                  key: const Key('incoming-password-value'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                    color: Theme.of(context).textTheme.titleLarge?.color,
+                  ),
+                ),
+              ),
+              actions,
+            ],
+          ),
+        ],
+      ),
     );
   }
 

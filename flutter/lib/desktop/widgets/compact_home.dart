@@ -142,6 +142,122 @@ class CompactPasswordState {
   }
 }
 
+/// Text shown beside the incoming-only password actions. A real password is
+/// never placed in the widget unless reveal is on.
+String incomingPasswordVisibleText(CompactPasswordState state, String raw) {
+  if (state.showActions) return state.display;
+  if (raw == '-' || raw.isEmpty) return raw;
+  return '';
+}
+
+class CompactPasswordActions extends StatelessWidget {
+  const CompactPasswordActions({
+    super.key,
+    required this.password,
+    required this.passwordLabel,
+    required this.revealTip,
+    required this.onToggleReveal,
+    required this.copyTip,
+    required this.onCopy,
+    required this.refreshTip,
+    required this.onRefresh,
+    this.showLabel = true,
+    this.editTip,
+    this.onEdit,
+  });
+
+  final CompactPasswordState password;
+  final bool showLabel;
+  final String passwordLabel;
+  final String revealTip;
+  final VoidCallback onToggleReveal;
+  final String copyTip;
+  final VoidCallback onCopy;
+  final String refreshTip;
+  final VoidCallback onRefresh;
+  final String? editTip;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CompactHomeColors.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (password.showActions) ...[
+          if (showLabel)
+            Flexible(
+              child: Text(
+                passwordLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: colors.muted),
+              ),
+            ),
+          if (showLabel) const SizedBox(width: 6),
+          if (showLabel)
+            Flexible(
+              child: Text(
+                password.display,
+                key: const Key('compact-password-display'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: colors.text),
+              ),
+            ),
+          _glyphButton(
+            key: const Key('compact-password-reveal'),
+            tip: revealTip,
+            icon: Icons.visibility_outlined,
+            onPressed: onToggleReveal,
+            color: colors.muted,
+          ),
+          _glyphButton(
+            key: const Key('compact-password-copy'),
+            tip: copyTip,
+            icon: Icons.copy_rounded,
+            onPressed: onCopy,
+            color: colors.muted,
+          ),
+          _glyphButton(
+            key: const Key('compact-password-refresh'),
+            tip: refreshTip,
+            icon: Icons.refresh_rounded,
+            onPressed: onRefresh,
+            color: colors.muted,
+          ),
+        ],
+        if (onEdit != null)
+          _glyphButton(
+            key: const Key('compact-password-edit'),
+            tip: editTip ?? '',
+            icon: Icons.edit_outlined,
+            onPressed: onEdit,
+            color: colors.muted,
+          ),
+      ],
+    );
+  }
+}
+
+Widget _glyphButton({
+  required Key key,
+  required String tip,
+  required IconData icon,
+  required VoidCallback? onPressed,
+  required Color color,
+}) {
+  return IconButton(
+    key: key,
+    tooltip: tip,
+    onPressed: onPressed,
+    icon: Icon(icon, size: 16, color: color),
+    splashRadius: 16,
+    padding: EdgeInsets.zero,
+    constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+  );
+}
+
 class CompactIdentityBar extends StatelessWidget {
   const CompactIdentityBar({
     super.key,
@@ -195,7 +311,7 @@ class CompactIdentityBar extends StatelessWidget {
             builder: (context, constraints) {
               final stacked = constraints.maxWidth < 720 || scale > 16;
               final id = _idCluster(colors);
-              final pass = _passwordCluster(colors);
+              final pass = _passwordCluster();
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,60 +365,18 @@ class CompactIdentityBar extends StatelessWidget {
     );
   }
 
-  Widget _passwordCluster(CompactHomeColors colors) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (password.showActions) ...[
-          Flexible(
-            child: Text(
-              passwordLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: colors.muted),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              password.display,
-              key: const Key('compact-password-display'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: colors.text),
-            ),
-          ),
-          _iconButton(
-            key: const Key('compact-password-reveal'),
-            tip: revealTip,
-            icon: Icons.visibility_outlined,
-            onPressed: onToggleReveal,
-            color: colors.muted,
-          ),
-          _iconButton(
-            key: const Key('compact-password-copy'),
-            tip: copyPasswordTip,
-            icon: Icons.copy_rounded,
-            onPressed: onCopyPassword,
-            color: colors.muted,
-          ),
-          _iconButton(
-            key: const Key('compact-password-refresh'),
-            tip: refreshTip,
-            icon: Icons.refresh_rounded,
-            onPressed: onRefreshPassword,
-            color: colors.muted,
-          ),
-        ],
-        if (onEditPassword != null)
-          _iconButton(
-            key: const Key('compact-password-edit'),
-            tip: editTip ?? '',
-            icon: Icons.edit_outlined,
-            onPressed: onEditPassword,
-            color: colors.muted,
-          ),
-      ],
+  Widget _passwordCluster() {
+    return CompactPasswordActions(
+      password: password,
+      passwordLabel: passwordLabel,
+      revealTip: revealTip,
+      onToggleReveal: onToggleReveal,
+      copyTip: copyPasswordTip,
+      onCopy: onCopyPassword,
+      refreshTip: refreshTip,
+      onRefresh: onRefreshPassword,
+      editTip: editTip,
+      onEdit: onEditPassword,
     );
   }
 
@@ -432,6 +506,238 @@ InputDecoration compactIdFieldDecoration(
       borderSide: BorderSide(color: colors.muted),
     ),
   );
+}
+
+class SelectionActionBar extends StatelessWidget {
+  const SelectionActionBar({
+    super.key,
+    required this.showBulkActions,
+    required this.bulkActions,
+    required this.trailing,
+  });
+
+  final bool showBulkActions;
+  final List<Widget> bulkActions;
+  final Widget trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (showBulkActions)
+          Flexible(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: bulkActions),
+            ),
+          ),
+        const Spacer(),
+        trailing,
+      ],
+    );
+  }
+}
+
+class CompactTabTrack extends StatelessWidget {
+  const CompactTabTrack({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CompactHomeColors.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.field,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.line),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: child,
+      ),
+    );
+  }
+}
+
+class CompactTabLabel extends StatelessWidget {
+  const CompactTabLabel({
+    super.key,
+    required this.label,
+    required this.selected,
+    this.onTap,
+    this.tooltip,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CompactHomeColors.of(context);
+    return Tooltip(
+      message: tooltip ?? label,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: selected ? colors.raised : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  color: selected ? colors.text : colors.muted,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CompactPeerActions extends StatelessWidget {
+  const CompactPeerActions({
+    super.key,
+    required this.connectLabel,
+    required this.fileLabel,
+    this.onConnect,
+    this.onFile,
+    this.trailing,
+  });
+
+  final String connectLabel;
+  final String fileLabel;
+  final VoidCallback? onConnect;
+  final VoidCallback? onFile;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = compactPeerActionStyle(CompactHomeColors.of(context));
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 72),
+          child: TextButton(
+            style: style,
+            onPressed: onConnect,
+            child: Text(
+              connectLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 88),
+          child: TextButton(
+            style: style,
+            onPressed: onFile,
+            child: Text(
+              fileLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        if (trailing != null) trailing!,
+      ],
+    );
+  }
+}
+
+class CompactDeviceRow extends StatelessWidget {
+  const CompactDeviceRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.online,
+    required this.actions,
+  });
+
+  final Widget icon;
+  final String title;
+  final String subtitle;
+  final bool online;
+  final Widget actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = CompactHomeColors.of(context);
+    return SizedBox(
+      height: 56,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: colors.line)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              IconTheme(
+                data: IconThemeData(color: colors.muted, size: 22),
+                child: icon,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colors.text,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty)
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: colors.muted),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: online
+                      ? const Color(0xFF3DDC97)
+                      : colors.muted.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(width: 8),
+              actions,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 ButtonStyle compactPeerActionStyle(CompactHomeColors colors) {

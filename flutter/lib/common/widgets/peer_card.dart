@@ -121,10 +121,34 @@ class _PeerCardState extends State<_PeerCard>
           ),
         );
       },
-      child: gestureDetector(
-          child: Obx(() => peerCardUiType.value == PeerUiType.grid
-              ? _buildPeerCard(context, peer, deco)
-              : _buildPeerTile(context, peer, deco))),
+      child: gestureDetector(child: Obx(() {
+        if (CompactHomeScope.isActive(context) &&
+            peerCardUiType.value == PeerUiType.list) {
+          return _buildCompactDeviceRow(peer);
+        }
+        return peerCardUiType.value == PeerUiType.grid
+            ? _buildPeerCard(context, peer, deco)
+            : _buildPeerTile(context, peer, deco);
+      })),
+    );
+  }
+
+  Widget _buildCompactDeviceRow(Peer peer) {
+    hideUsernameOnCard ??=
+        bind.mainGetBuildinOption(key: kHideUsernameOnCard) == 'Y';
+    final host = hideUsernameOnCard == true
+        ? peer.hostname
+        : '${peer.username}${peer.username.isNotEmpty && peer.hostname.isNotEmpty ? '@' : ''}${peer.hostname}';
+    final idText = formatID(peer.id);
+    final title =
+        peer.alias.isNotEmpty ? peer.alias : (host.isNotEmpty ? host : idText);
+    final subtitle = title == idText ? host : idText;
+    return CompactDeviceRow(
+      icon: getPlatformImage(peer.platform, size: 22),
+      title: title,
+      subtitle: subtitle,
+      online: peer.online,
+      actions: checkBoxOrActionMoreLandscape(peer, isTile: true),
     );
   }
 
@@ -470,42 +494,17 @@ class _PeerCardState extends State<_PeerCard>
         return icon.marginOnly(right: right);
       }
     } else if (CompactHomeScope.isActive(context)) {
-      final colors = CompactHomeColors.of(context);
-      final style = compactPeerActionStyle(colors);
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 72),
-            child: TextButton(
-              style: style,
-              onPressed: () => widget.connect(context, peer.id),
-              child: Text(
-                translate('Connect'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 88),
-            child: TextButton(
-              style: style,
-              onPressed: () => connectInPeerTab(
-                context,
-                peer,
-                widget.tab,
-                isFileTransfer: true,
-              ),
-              child: Text(
-                translate('Transfer file'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          _actionMore(peer),
-        ],
+      return CompactPeerActions(
+        connectLabel: translate('Connect'),
+        fileLabel: translate('Transfer file'),
+        onConnect: () => widget.connect(context, peer.id),
+        onFile: () => connectInPeerTab(
+          context,
+          peer,
+          widget.tab,
+          isFileTransfer: true,
+        ),
+        trailing: _actionMore(peer),
       );
     } else {
       return _actionMore(peer);

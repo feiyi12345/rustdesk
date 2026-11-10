@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/hbbs/hbbs.dart';
 import 'package:flutter_hbb/common/widgets/login.dart';
+import 'package:flutter_hbb/common/widgets/login_prompt.dart';
 import 'package:flutter_hbb/common/widgets/peers_view.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
@@ -31,9 +32,10 @@ class _MyGroupState extends State<MyGroup> {
   Widget build(BuildContext context) {
     return Obx(() {
       if (!gFFI.userModel.isLogin) {
-        return Center(
-            child: ElevatedButton(
-                onPressed: loginDialog, child: Text(translate("Login"))));
+        return LoginPromptButton(
+          label: translate('Login'),
+          onPressed: loginDialog,
+        );
       } else if (gFFI.userModel.networkError.isNotEmpty) {
         return netWorkErrorWidget();
       } else if (gFFI.groupModel.groupLoading.value && gFFI.groupModel.emtpy) {
@@ -196,10 +198,9 @@ class _MyGroupState extends State<MyGroup> {
     final username = user.name;
     final dn = user.displayNameOrName;
     final isDuplicate = (displayNameCount[dn] ?? 0) > 1;
-    final displayName =
-        isDuplicate && user.displayName.trim().isNotEmpty
-            ? '${user.displayName} (@$username)'
-            : dn;
+    final displayName = isDuplicate && user.displayName.trim().isNotEmpty
+        ? '${user.displayName} (@$username)'
+        : dn;
     return InkWell(onTap: () {
       isSelectedDeviceGroup.value = false;
       if (selectedAccessibleItemName.value != username) {

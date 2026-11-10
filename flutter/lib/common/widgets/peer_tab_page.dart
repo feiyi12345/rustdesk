@@ -71,9 +71,22 @@ class _PeerTabPageState extends State<PeerTabPage>
   RelativeRect? mobileTabContextMenuPos;
 
   final isOptVisiableFixed = isOptionFixed(kOptionPeerTabVisible);
+  var _appliedCompactListDefault = false;
 
   _PeerTabPageState() {
     _loadLocalOptions();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_appliedCompactListDefault || !CompactHomeScope.isActive(context)) {
+      return;
+    }
+    _appliedCompactListDefault = true;
+    if (bind.getLocalFlutterOption(k: kOptionPeerCardUiType).isEmpty) {
+      peerCardUiType.value = PeerUiType.list;
+    }
   }
 
   void _loadLocalOptions() {
@@ -108,7 +121,6 @@ class _PeerTabPageState extends State<PeerTabPage>
     }
 
     final switchBar = visibleContextMenuListener(_createSwitchBar(context));
-    final colors = compact ? CompactHomeColors.of(context) : null;
 
     return Column(
       textBaseline: TextBaseline.ideographic,
@@ -125,17 +137,7 @@ class _PeerTabPageState extends State<PeerTabPage>
                   children: [
                     Expanded(
                       child: compact
-                          ? DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: colors!.field,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: colors.line),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: switchBar,
-                              ),
-                            )
+                          ? CompactTabTrack(child: switchBar)
                           : switchBar,
                     ),
                     if (stateGlobal.isPortrait.isTrue)
@@ -182,7 +184,18 @@ class _PeerTabPageState extends State<PeerTabPage>
               key: ValueKey(t),
               index: counter,
               child: compact
-                  ? _compactTabLabel(context, model, t, selected)
+                  ? CompactTabLabel(
+                      label: translate(PeerTabModel.tabNames[t]),
+                      selected: selected,
+                      tooltip: model.tabTooltip(t),
+                      onTap: isOptionFixed(kOptionPeerTabIndex)
+                          ? null
+                          : () async {
+                              await handleTabSelection(t);
+                              await bind.setLocalFlutterOption(
+                                  k: kOptionPeerTabIndex, v: t.toString());
+                            },
+                    )
                   : Obx(() => Tooltip(
                         preferBelow: false,
                         message: model.tabTooltip(t),
@@ -207,45 +220,6 @@ class _PeerTabPageState extends State<PeerTabPage>
                         ),
                       )));
         }).toList());
-  }
-
-  Widget _compactTabLabel(
-      BuildContext context, PeerTabModel model, int index, bool selected) {
-    final colors = CompactHomeColors.of(context);
-    return Tooltip(
-      message: model.tabTooltip(index),
-      child: InkWell(
-        onTap: isOptionFixed(kOptionPeerTabIndex)
-            ? null
-            : () async {
-                await handleTabSelection(index);
-                await bind.setLocalFlutterOption(
-                    k: kOptionPeerTabIndex, v: index.toString());
-              },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: selected ? colors.raised : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text(
-                translate(PeerTabModel.tabNames[index]),
-                maxLines: 1,
-                softWrap: false,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  color: selected ? colors.text : colors.muted,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _createPeersView() {
@@ -420,28 +394,21 @@ class _PeerTabPageState extends State<PeerTabPage>
   }
 
   Widget createMultiSelectionBar(PeerTabModel model) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Offstage(
-          offstage: model.selectedPeers.isEmpty,
-          child: Row(
-            children: [
-              deleteSelection(),
-              addSelectionToFav(),
-              addSelectionToAb(),
-              editSelectionTags(),
-            ],
-          ),
-        ),
-        Row(
-          children: [
-            selectionCount(model.selectedPeers.length),
-            selectAll(model),
-            closeSelection(),
-          ],
-        )
+    return SelectionActionBar(
+      showBulkActions: model.selectedPeers.isNotEmpty,
+      bulkActions: [
+        deleteSelection(),
+        addSelectionToFav(),
+        addSelectionToAb(),
+        editSelectionTags(),
       ],
+      trailing: Row(
+        children: [
+          selectionCount(model.selectedPeers.length),
+          selectAll(model),
+          closeSelection(),
+        ],
+      ),
     );
   }
 
