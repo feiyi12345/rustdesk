@@ -1,10 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:extended_text/extended_text.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter_hbb/common/file_transfer_logic.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart';
+import 'package:flutter_hbb/desktop/local_file_stage.dart';
 import 'package:flutter_hbb/desktop/widgets/dragable_divider.dart';
+import 'package:flutter_hbb/desktop/widgets/file_transfer_bars.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/gestures.dart';
@@ -34,9 +37,6 @@ enum LocationStatus {
 
   /// show path text field
   pathLocation,
-
-  /// show file search bar text field
-  fileSearchBar
 }
 
 /// The status of currently focused scope of the mouse
@@ -86,6 +86,8 @@ class _FileManagerPageState extends State<FileManagerPage>
   final _dropMaskVisible = false.obs; // TODO impl drop mask
   final _overlayKeyState = OverlayKeyState();
   final _uniqueKey = UniqueKey();
+  final pendingLocal = <Entry>[].obs;
+  bool _jobPanelExpanded = false;
 
   late FFI _ffi;
 
@@ -164,18 +166,25 @@ class _FileManagerPageState extends State<FileManagerPage>
       OverlayEntry(builder: (_) {
         return willPopScope(Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: Row(
+          body: Column(
             children: [
-              if (!isWeb)
-                Flexible(
-                    flex: 3,
-                    child: dropArea(FileManagerView(
-                        model.localController, _ffi, _mouseFocusScope))),
-              Flexible(
-                  flex: 3,
-                  child: dropArea(FileManagerView(
-                      model.remoteController, _ffi, _mouseFocusScope))),
-              Flexible(flex: 2, child: statusList())
+              Expanded(
+                child: Row(
+                  children: [
+                    if (!isWeb)
+                      Flexible(
+                          flex: 3,
+                          child: dropArea(FileManagerView(
+                              model.localController, _ffi, _mouseFocusScope,
+                              pendingLocal: pendingLocal))),
+                    Flexible(
+                        flex: 3,
+                        child: dropArea(FileManagerView(
+                            model.remoteController, _ffi, _mouseFocusScope))),
+                  ],
+                ),
+              ),
+              statusList(),
             ],
           ),
         ));
@@ -185,8 +194,7 @@ class _FileManagerPageState extends State<FileManagerPage>
 
   Widget dropArea(FileManagerView fileView) {
     return DropTarget(
-        onDragDone: (detail) =>
-            handleDragDone(detail, fileView.controller.isLocal),
+        onDragDone: (detail) => handleDragDone(detail),
         onDragEntered: (enter) {
           _dropMaskVisible.value = true;
         },
@@ -371,49 +379,58 @@ class _FileManagerPageState extends State<FileManagerPage>
           padding: const EdgeInsets.all(8.0),
           child: Obx(
             () => jobController.jobTable.isEmpty
-                ? generateCard(
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SvgPicture.asset(
-                            "assets/transfer.svg",
-                            colorFilter: svgColor(
-                                Theme.of(context).tabBarTheme.labelColor),
-                            height: 40,
-                          ).paddingOnly(bottom: 10),
-                          Text(
-                            translate("No transfers in progress"),
-                            textAlign: TextAlign.center,
-                            textScaler: TextScaler.linear(1.20),
-                            style: TextStyle(
-                                color:
-                                    Theme.of(context).tabBarTheme.labelColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : statusListView(jobController.jobTable),
+                ? _collapsedJobBar()
+                : SizedBox(
+                    height: 220,
+                    child: statusListView(jobController.jobTable),
+                  ),
           )),
     );
   }
 
-  void handleDragDone(DropDoneDetails details, bool isLocal) {
-    if (isLocal) {
-      // ignore local
-      return;
+  void handleDragDone(DropDoneDetails details) {
+    for (final file in details.files) {
+      _stagePending(file.path);
     }
-    final items = SelectedItems(isLocal: false);
-    for (var file in details.files) {
-      final f = File(file.path);
-      items.add(Entry()
-        ..path = file.path
-        ..name = file.name
-        ..size = FileSystemEntity.isDirectorySync(f.path) ? 0 : f.lengthSync());
-    }
-    final otherSideData = model.localController.directoryData();
-    model.remoteController.sendFiles(items, otherSideData);
+  }
+
+  void _stagePending(String path) {
+    if (path.isEmpty) return;
+    final staged = stageLocalPath(path);
+    if (pendingLocal.any((entry) => entry.path == staged.path)) return;
+    pendingLocal.add(Entry()
+      ..path = staged.path
+      ..name = staged.name
+      ..size = staged.size
+      ..entryType = staged.entryType);
+  }
+
+  Widget _collapsedJobBar() {
+    return Material(
+      color: Theme.of(context).cardColor,
+      child: InkWell(
+        onTap: () => setState(() => _jobPanelExpanded = !_jobPanelExpanded),
+        child: SizedBox(
+          height: _jobPanelExpanded ? 72 : 36,
+          child: Row(
+            children: [
+              Icon(
+                _jobPanelExpanded ? Icons.expand_more : Icons.chevron_right,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  translate("No transfers in progress"),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -421,8 +438,10 @@ class FileManagerView extends StatefulWidget {
   final FileController controller;
   final FFI _ffi;
   final Rx<MouseFocusScope> _mouseFocusScope;
+  final RxList<Entry>? pendingLocal;
 
-  FileManagerView(this.controller, this._ffi, this._mouseFocusScope);
+  FileManagerView(this.controller, this._ffi, this._mouseFocusScope,
+      {this.pendingLocal});
 
   @override
   State<StatefulWidget> createState() => _FileManagerViewState();
@@ -436,6 +455,11 @@ class _FileManagerViewState extends State<FileManagerView> {
   final _breadCrumbScroller = ScrollController();
   final _keyboardNode = FocusNode();
   final _listSearchBuffer = TimeoutStringBuffer();
+  final _pathController = TextEditingController();
+  final _searchController = TextEditingController();
+  final _searchNode = FocusNode();
+  var _searchDirectory = '';
+  Worker? _directoryWorker;
   final _nameColWidth = 0.0.obs;
   final _modifiedColWidth = 0.0.obs;
   final _sizeColWidth = 0.0.obs;
@@ -458,15 +482,27 @@ class _FileManagerViewState extends State<FileManagerView> {
   @override
   void initState() {
     super.initState();
+    _searchDirectory = controller.directory.value.path;
     // register location listener
     _locationNode.addListener(onLocationFocusChanged);
-    controller.directory.listen((e) => breadCrumbScrollToEnd());
+    _directoryWorker = ever<FileDirectory>(controller.directory, (dir) {
+      breadCrumbScrollToEnd();
+      if (_searchDirectory == dir.path) return;
+      _searchDirectory = dir.path;
+      if (!mounted) return;
+      _searchController.clear();
+      _searchText.value = '';
+    });
   }
 
   @override
   void dispose() {
+    _directoryWorker?.dispose();
     _locationNode.removeListener(onLocationFocusChanged);
     _locationNode.dispose();
+    _searchNode.dispose();
+    _pathController.dispose();
+    _searchController.dispose();
     _keyboardNode.dispose();
     _breadCrumbScroller.dispose();
     _fileListScrollController.dispose();
@@ -534,9 +570,7 @@ class _FileManagerViewState extends State<FileManagerView> {
       // ignore
     } else {
       // lost focus, change to bread
-      if (_locationStatus.value != LocationStatus.fileSearchBar) {
-        _locationStatus.value = LocationStatus.bread;
-      }
+      _locationStatus.value = LocationStatus.bread;
     }
   }
 
@@ -642,10 +676,19 @@ class _FileManagerViewState extends State<FileManagerView> {
                       padding: EdgeInsets.symmetric(vertical: 2.5),
                       child: GestureDetector(
                         onTap: () {
-                          _locationStatus.value =
-                              _locationStatus.value == LocationStatus.bread
-                                  ? LocationStatus.pathLocation
-                                  : LocationStatus.bread;
+                          final opening = _locationStatus.value !=
+                              LocationStatus.pathLocation;
+                          if (opening) {
+                            final path = controller.directory.value.path;
+                            _pathController.value = TextEditingValue(
+                              text: path,
+                              selection:
+                                  TextSelection.collapsed(offset: path.length),
+                            );
+                          }
+                          _locationStatus.value = opening
+                              ? LocationStatus.pathLocation
+                              : LocationStatus.bread;
                           Future.delayed(Duration.zero, () {
                             if (_locationStatus.value ==
                                 LocationStatus.pathLocation) {
@@ -672,50 +715,32 @@ class _FileManagerViewState extends State<FileManagerView> {
                 ),
               ),
               Obx(() {
-                switch (_locationStatus.value) {
-                  case LocationStatus.bread:
-                    return MenuButton(
-                      tooltip: translate('Search'),
-                      onPressed: () {
-                        _locationStatus.value = LocationStatus.fileSearchBar;
-                        Future.delayed(
-                            Duration.zero, () => _locationNode.requestFocus());
-                      },
-                      child: SvgPicture.asset(
-                        "assets/search.svg",
-                        colorFilter:
-                            svgColor(Theme.of(context).tabBarTheme.labelColor),
-                      ),
-                      color: Theme.of(context).cardColor,
-                      hoverColor: Theme.of(context).hoverColor,
-                    );
-                  case LocationStatus.pathLocation:
-                    return MenuButton(
-                      onPressed: null,
-                      child: SvgPicture.asset(
-                        "assets/close.svg",
-                        colorFilter:
-                            svgColor(Theme.of(context).tabBarTheme.labelColor),
-                      ),
-                      color: Theme.of(context).disabledColor,
-                      hoverColor: Theme.of(context).hoverColor,
-                    );
-                  case LocationStatus.fileSearchBar:
-                    return MenuButton(
-                      tooltip: translate('Clear'),
-                      onPressed: () {
-                        onSearchText("", isLocal);
-                        _locationStatus.value = LocationStatus.bread;
-                      },
-                      child: SvgPicture.asset(
-                        "assets/close.svg",
-                        colorFilter:
-                            svgColor(Theme.of(context).tabBarTheme.labelColor),
-                      ),
-                      color: Theme.of(context).cardColor,
-                      hoverColor: Theme.of(context).hoverColor,
-                    );
+                if (_locationStatus.value == LocationStatus.pathLocation) {
+                  return MenuButton(
+                    tooltip: translate('Close'),
+                    onPressed: () {
+                      _locationStatus.value = LocationStatus.bread;
+                    },
+                    child: SvgPicture.asset(
+                      "assets/close.svg",
+                      colorFilter:
+                          svgColor(Theme.of(context).tabBarTheme.labelColor),
+                    ),
+                    color: Theme.of(context).cardColor,
+                    hoverColor: Theme.of(context).hoverColor,
+                  );
                 }
+                return MenuButton(
+                  tooltip: translate('Search'),
+                  onPressed: () => _searchNode.requestFocus(),
+                  child: SvgPicture.asset(
+                    "assets/search.svg",
+                    colorFilter:
+                        svgColor(Theme.of(context).tabBarTheme.labelColor),
+                  ),
+                  color: Theme.of(context).cardColor,
+                  hoverColor: Theme.of(context).hoverColor,
+                );
               }),
               MenuButton(
                 tooltip: translate('Refresh File'),
@@ -735,6 +760,19 @@ class _FileManagerViewState extends State<FileManagerView> {
               ),
             ],
           ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: FileNameSearchBar(
+              controller: _searchController,
+              focusNode: _searchNode,
+              hint: translate('Search'),
+              clearTooltip: translate('Clear'),
+              onChanged: _setSearch,
+              onClear: () => _setSearch(''),
+              onSubmitted: (_) => _searchNode.unfocus(),
+            ),
+          ),
+          _transferSummary(),
           Row(
             textDirection: isLocal ? TextDirection.ltr : TextDirection.rtl,
             children: [
@@ -845,23 +883,26 @@ class _FileManagerViewState extends State<FileManagerView> {
                       color: Theme.of(context).cardColor,
                       hoverColor: Theme.of(context).hoverColor,
                     ),
-                    Obx(() => MenuButton(
-                          tooltip: translate('Delete'),
-                          onPressed: SelectedItems.valid(selectedItems.items)
-                              ? () async {
-                                  await (controller
-                                      .removeAction(selectedItems));
-                                  selectedItems.clear();
-                                }
-                              : null,
-                          child: SvgPicture.asset(
-                            "assets/trash.svg",
-                            colorFilter: svgColor(
-                                Theme.of(context).tabBarTheme.labelColor),
-                          ),
-                          color: Theme.of(context).cardColor,
-                          hoverColor: Theme.of(context).hoverColor,
-                        )),
+                    if (isLocal && !isWeb)
+                      MenuButton(
+                        tooltip: translate('Choose files'),
+                        onPressed: _pickFiles,
+                        child: Icon(Icons.note_add_outlined,
+                            size: 18,
+                            color: Theme.of(context).tabBarTheme.labelColor),
+                        color: Theme.of(context).cardColor,
+                        hoverColor: Theme.of(context).hoverColor,
+                      ),
+                    if (isLocal && !isWeb)
+                      MenuButton(
+                        tooltip: translate('Choose folder'),
+                        onPressed: _pickFolder,
+                        child: Icon(Icons.drive_folder_upload_outlined,
+                            size: 18,
+                            color: Theme.of(context).tabBarTheme.labelColor),
+                        color: Theme.of(context).cardColor,
+                        hoverColor: Theme.of(context).hoverColor,
+                      ),
                     menu(isLocal: isLocal),
                   ],
                 ),
@@ -926,77 +967,51 @@ class _FileManagerViewState extends State<FileManagerView> {
                         ),
                       ).marginOnly(left: 8),
                     )).marginOnly(left: 16),
-              Obx(() => ElevatedButton.icon(
-                    style: ButtonStyle(
-                      padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
-                          isLocal
-                              ? EdgeInsets.only(left: 10)
-                              : EdgeInsets.only(right: 10)),
-                      backgroundColor: MaterialStateProperty.all(
-                        selectedItems.items.isEmpty
-                            ? MyTheme.accent80
-                            : MyTheme.accent,
-                      ),
+              Obx(() {
+                final ready = _canSend();
+                final labelColor = ready
+                    ? Colors.white
+                    : Theme.of(context).brightness == Brightness.light
+                        ? MyTheme.grayBg
+                        : MyTheme.darkGray;
+                return ElevatedButton.icon(
+                  style: ButtonStyle(
+                    padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
+                        isLocal
+                            ? EdgeInsets.only(left: 10)
+                            : EdgeInsets.only(right: 10)),
+                    backgroundColor: MaterialStateProperty.all(
+                      ready ? MyTheme.accent : MyTheme.accent80,
                     ),
-                    onPressed: SelectedItems.valid(selectedItems.items)
-                        ? () {
-                            final otherSideData =
-                                controller.getOtherSideDirectoryData();
-                            controller.sendFiles(selectedItems, otherSideData);
-                            selectedItems.clear();
-                          }
-                        : null,
-                    icon: isLocal
-                        ? Text(
-                            translate('Send'),
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: selectedItems.items.isEmpty
-                                  ? Theme.of(context).brightness ==
-                                          Brightness.light
-                                      ? MyTheme.grayBg
-                                      : MyTheme.darkGray
-                                  : Colors.white,
-                            ),
-                          )
-                        : isWeb
-                            ? Offstage()
-                            : RotatedBox(
-                                quarterTurns: 2,
-                                child: SvgPicture.asset(
-                                  "assets/arrow.svg",
-                                  colorFilter: svgColor(
-                                      selectedItems.items.isEmpty
-                                          ? Theme.of(context).brightness ==
-                                                  Brightness.light
-                                              ? MyTheme.grayBg
-                                              : MyTheme.darkGray
-                                          : Colors.white),
-                                  alignment: Alignment.bottomRight,
-                                ),
+                  ),
+                  onPressed: ready ? _sendCurrent : null,
+                  icon: isLocal
+                      ? Text(
+                          translate('Send to remote'),
+                          textAlign: TextAlign.right,
+                          style: TextStyle(color: labelColor),
+                        )
+                      : isWeb
+                          ? Offstage()
+                          : RotatedBox(
+                              quarterTurns: 2,
+                              child: SvgPicture.asset(
+                                "assets/arrow.svg",
+                                colorFilter: svgColor(labelColor),
+                                alignment: Alignment.bottomRight,
                               ),
-                    label: isLocal
-                        ? SvgPicture.asset(
-                            "assets/arrow.svg",
-                            colorFilter: svgColor(selectedItems.items.isEmpty
-                                ? Theme.of(context).brightness ==
-                                        Brightness.light
-                                    ? MyTheme.grayBg
-                                    : MyTheme.darkGray
-                                : Colors.white),
-                          )
-                        : Text(
-                            translate(isWeb ? 'Download' : 'Receive'),
-                            style: TextStyle(
-                              color: selectedItems.items.isEmpty
-                                  ? Theme.of(context).brightness ==
-                                          Brightness.light
-                                      ? MyTheme.grayBg
-                                      : MyTheme.darkGray
-                                  : Colors.white,
                             ),
-                          ),
-                  )),
+                  label: isLocal
+                      ? SvgPicture.asset(
+                          "assets/arrow.svg",
+                          colorFilter: svgColor(labelColor),
+                        )
+                      : Text(
+                          translate('Download to local'),
+                          style: TextStyle(color: labelColor),
+                        ),
+                );
+              }),
             ],
           ).marginOnly(top: 8.0)
         ],
@@ -1022,14 +1037,23 @@ class _FileManagerViewState extends State<FileManagerView> {
       ),
       MenuEntryButton(
           childBuilder: (style) => Text(translate("Select All"), style: style),
-          proc: () => setState(() =>
-              selectedItems.selectAll(controller.directory.value.entries)),
+          proc: () => selectedItems.selectAll(_visibleEntries()),
           padding: kDesktopMenuPadding,
           dismissOnClicked: true),
       MenuEntryButton(
           childBuilder: (style) =>
               Text(translate("Unselect All"), style: style),
           proc: () => selectedItems.clear(),
+          padding: kDesktopMenuPadding,
+          dismissOnClicked: true),
+      MenuEntryButton(
+          childBuilder: (style) => Text(translate("Delete"), style: style),
+          proc: () {
+            if (!SelectedItems.valid(selectedItems.items)) return;
+            unawaited(controller.removeAction(selectedItems).then((_) {
+              selectedItems.clear();
+            }));
+          },
           padding: kDesktopMenuPadding,
           dismissOnClicked: true)
     ];
@@ -1071,63 +1095,63 @@ class _FileManagerViewState extends State<FileManagerView> {
 
   Widget _buildFileList(
       BuildContext context, ScrollController scrollController) {
-    final fd = controller.directory.value;
-    final entries = fd.entries;
     Rx<Entry?> rightClickEntry = Rx(null);
 
     return ListSearchActionListener(
       node: _keyboardNode,
       buffer: _listSearchBuffer,
       onNext: (buffer) {
-        debugPrint("searching next for $buffer");
         assert(buffer.length == 1);
         assert(selectedItems.items.length <= 1);
+        final visible = _visibleEntries();
         var skipCount = 0;
         if (selectedItems.items.isNotEmpty) {
-          final index = entries.indexOf(selectedItems.items.first);
+          final index = indexByPath(
+            visible,
+            selectedItems.items.first.path,
+            selectedItems.items.first.entryType,
+            (entry) => entry.path,
+            (entry) => entry.entryType,
+          );
           if (index < 0) {
             return;
           }
           skipCount = index + 1;
         }
-        var searchResult = entries
-            .skip(skipCount)
-            .where((element) => element.name.toLowerCase().startsWith(buffer));
+        var searchResult = visible.skip(skipCount).where((element) =>
+            element.name.toLowerCase().startsWith(buffer.toLowerCase()));
         if (searchResult.isEmpty) {
-          // cannot find next, lets restart search from head
-          debugPrint("restart search from head");
-          searchResult = entries.where(
-              (element) => element.name.toLowerCase().startsWith(buffer));
+          searchResult = visible.where((element) =>
+              element.name.toLowerCase().startsWith(buffer.toLowerCase()));
         }
         if (searchResult.isEmpty) {
           selectedItems.clear();
           return;
         }
-        _jumpToEntry(isLocal, searchResult.first, scrollController,
-            kDesktopFileTransferRowHeight);
+        _jumpToEntry(searchResult.first, scrollController,
+            kDesktopFileTransferRowHeight, visible);
       },
       onSearch: (buffer) {
-        debugPrint("searching for $buffer");
-        final selectedEntries = selectedItems;
-        final searchResult = entries
-            .where((element) => element.name.toLowerCase().startsWith(buffer));
-        selectedEntries.clear();
+        final visible = _visibleEntries();
+        final searchResult = visible.where((element) =>
+            element.name.toLowerCase().startsWith(buffer.toLowerCase()));
         if (searchResult.isEmpty) {
           selectedItems.clear();
           return;
         }
-        _jumpToEntry(isLocal, searchResult.first, scrollController,
-            kDesktopFileTransferRowHeight);
+        _jumpToEntry(searchResult.first, scrollController,
+            kDesktopFileTransferRowHeight, visible);
       },
       child: Obx(() {
         final entries = controller.directory.value.entries;
-        final filteredEntries = _searchText.isNotEmpty
-            ? entries.where((element) {
-                return element.name.contains(_searchText.value);
-              }).toList(growable: false)
-            : entries;
-        // Keep rows lazy so large directories only build visible list items.
-        final rows = filteredEntries.map((entry) {
+        final filteredEntries = filterEntriesByName(
+          entries,
+          _searchText.value,
+          (entry) => entry.name,
+        );
+        // Build one row per visible index. map().elementAt walks from the start.
+        Widget rowAt(int index) {
+          final entry = filteredEntries[index];
           final sizeStr =
               entry.isFile ? readableFileSize(entry.size.toDouble()) : "";
           final lastModifiedStr = entry.isDrive
@@ -1207,6 +1231,24 @@ class _FileManagerViewState extends State<FileManagerView> {
                       child: InkWell(
                         child: Row(
                           children: [
+                            if (!entry.isDrive)
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: Checkbox(
+                                  value: selectedItems.items.contains(entry),
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  onChanged: (checked) {
+                                    if (checked == true) {
+                                      selectedItems.add(entry);
+                                    } else {
+                                      selectedItems.remove(entry);
+                                    }
+                                  },
+                                ),
+                              ),
                             GestureDetector(
                               child: Obx(
                                 () => Container(
@@ -1290,7 +1332,7 @@ class _FileManagerViewState extends State<FileManagerView> {
                                     sizeStr,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 12,
                                         color:
                                             selectedItems.items.contains(entry)
                                                 ? Colors.white70
@@ -1309,8 +1351,10 @@ class _FileManagerViewState extends State<FileManagerView> {
                   ],
                 ))),
           );
-        });
+        }
 
+        final showNoMatches =
+            filteredEntries.isEmpty && _searchText.value.isNotEmpty;
         return Column(
           children: [
             // Header
@@ -1321,14 +1365,14 @@ class _FileManagerViewState extends State<FileManagerView> {
             ),
             // Body
             Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                itemExtent: kDesktopFileTransferRowHeight,
-                itemBuilder: (context, index) {
-                  return rows.elementAt(index);
-                },
-                itemCount: rows.length,
-              ),
+              child: showNoMatches
+                  ? FileSearchEmptyHint(message: translate('No matches'))
+                  : ListView.builder(
+                      controller: scrollController,
+                      itemExtent: kDesktopFileTransferRowHeight,
+                      itemBuilder: (context, index) => rowAt(index),
+                      itemCount: filteredEntries.length,
+                    ),
             ),
           ],
         );
@@ -1336,31 +1380,140 @@ class _FileManagerViewState extends State<FileManagerView> {
     );
   }
 
-  onSearchText(String searchText, bool isLocal) {
-    selectedItems.clear();
-    _searchText.value = searchText;
+  List<Entry> _visibleEntries() {
+    return filterEntriesByName(
+      controller.directory.value.entries,
+      _searchText.value,
+      (entry) => entry.name,
+    );
   }
 
-  void _jumpToEntry(bool isLocal, Entry entry,
-      ScrollController scrollController, double rowHeight) {
-    final entries = controller.directory.value.entries;
-    final index = entries.indexOf(entry);
-    if (index == -1) {
-      debugPrint("entry is not valid: ${entry.path}");
+  void _setSearch(String searchText) {
+    _searchText.value = searchText;
+    final kept = reconcileByPath(
+      selectedItems.items.toList(growable: false),
+      _visibleEntries(),
+      (entry) => entry.path,
+      (entry) => entry.entryType,
+    );
+    selectedItems.clear();
+    selectedItems.items.addAll(kept);
+  }
+
+  int _directorySelectionCount() {
+    return selectedItems.items.where((entry) => !entry.isDrive).length;
+  }
+
+  int _pendingCount() {
+    if (!isLocal) return 0;
+    return widget.pendingLocal?.length ?? 0;
+  }
+
+  bool _canSend() {
+    return canSendTransfer(
+      directoryCount: _directorySelectionCount(),
+      pendingCount: _pendingCount(),
+    );
+  }
+
+  void _sendCurrent() {
+    final batch = SelectedItems(isLocal: isLocal);
+    for (final item in selectedItems.items) {
+      if (!item.isDrive) {
+        batch.items.add(item);
+      }
     }
-    final selectedEntries = selectedItems;
-    final searchResult = entries.where((element) => element == entry);
-    selectedEntries.clear();
-    if (searchResult.isEmpty) {
+    final pending = widget.pendingLocal;
+    if (isLocal && pending != null) {
+      for (final item in pending) {
+        final already = batch.items.any((entry) =>
+            entry.path == item.path && entry.entryType == item.entryType);
+        if (!already) {
+          batch.items.add(item);
+        }
+      }
+    }
+    if (batch.items.isEmpty) return;
+    controller.sendFiles(batch, controller.getOtherSideDirectoryData());
+    selectedItems.clear();
+    if (isLocal) pending?.clear();
+  }
+
+  Future<void> _pickFiles() async {
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result == null) return;
+    for (final file in result.files) {
+      final path = file.path;
+      if (path != null) {
+        _stagePending(path);
+      }
+    }
+  }
+
+  Future<void> _pickFolder() async {
+    final path = await FilePicker.platform.getDirectoryPath();
+    if (path == null) return;
+    _stagePending(path);
+  }
+
+  void _stagePending(String path) {
+    final pending = widget.pendingLocal;
+    if (pending == null || path.isEmpty) return;
+    final staged = stageLocalPath(path);
+    if (pending.any((entry) => entry.path == staged.path)) return;
+    pending.add(Entry()
+      ..path = staged.path
+      ..name = staged.name
+      ..size = staged.size
+      ..entryType = staged.entryType);
+  }
+
+  Widget _transferSummary() {
+    return Obx(() {
+      final directoryCount = _directorySelectionCount();
+      final pendingCount = _pendingCount();
+      final target = controller.getOtherSideDirectoryData().directory.path;
+      final size = <Entry>[
+        ...selectedItems.items.where((entry) => !entry.isDrive),
+        if (isLocal) ...?widget.pendingLocal,
+      ].fold<int>(0, (sum, entry) => sum + (entry.isFile ? entry.size : 0));
+      return TransferSelectionBar(
+        directoryCount: directoryCount,
+        pendingCount: pendingCount,
+        directoryLabel: translate('Selected {} items')
+            .replaceFirst('{}', '$directoryCount'),
+        pendingLabel:
+            translate('Pending {} items').replaceFirst('{}', '$pendingCount'),
+        targetLabel:
+            '${translate('Target')} $target · ${readableFileSize(size.toDouble())}',
+        clearDirectoryLabel: translate('Clear'),
+        clearPendingLabel: translate('Clear'),
+        onClearDirectory: selectedItems.clear,
+        onClearPending: () => widget.pendingLocal?.clear(),
+      );
+    });
+  }
+
+  void _jumpToEntry(Entry entry, ScrollController scrollController,
+      double rowHeight, List<Entry> visible) {
+    final index = indexByPath(
+      visible,
+      entry.path,
+      entry.entryType,
+      (item) => item.path,
+      (item) => item.entryType,
+    );
+    if (index < 0) {
       return;
     }
+    final current = visible[index];
+    selectedItems.clear();
+    selectedItems.add(current);
+    if (!scrollController.hasClients) return;
     final offset = min(
-        max(scrollController.position.minScrollExtent,
-            entries.indexOf(searchResult.first) * rowHeight),
+        max(scrollController.position.minScrollExtent, index * rowHeight),
         scrollController.position.maxScrollExtent);
     scrollController.jumpTo(offset);
-    selectedEntries.add(searchResult.first);
-    debugPrint("focused on ${searchResult.first.name}");
   }
 
   void _onSelectedChanged(SelectedItems selectedItems, List<Entry> entries,
@@ -1380,18 +1533,32 @@ class _FileManagerViewState extends State<FileManagerView> {
         selectedItems.add(entry);
       }
     } else if (isShiftDown) {
-      final List<int> indexGroup = [];
-      for (var selected in selectedItems.items) {
-        indexGroup.add(entries.indexOf(selected));
+      final indexGroup = <int>[];
+      for (final selected in selectedItems.items) {
+        final index = indexByPath(
+          entries,
+          selected.path,
+          selected.entryType,
+          (item) => item.path,
+          (item) => item.entryType,
+        );
+        if (index >= 0) indexGroup.add(index);
       }
-      indexGroup.add(entries.indexOf(entry));
-      indexGroup.removeWhere((e) => e == -1);
-      final maxIndex = indexGroup.reduce(max);
-      final minIndex = indexGroup.reduce(min);
+      final current = indexByPath(
+        entries,
+        entry.path,
+        entry.entryType,
+        (item) => item.path,
+        (item) => item.entryType,
+      );
+      if (current >= 0) indexGroup.add(current);
+      if (indexGroup.isEmpty) return;
+      final picked =
+          rangeBetween(entries, indexGroup.reduce(min), indexGroup.reduce(max));
       selectedItems.clear();
-      entries
-          .getRange(minIndex, maxIndex + 1)
-          .forEach((e) => selectedItems.add(e));
+      for (final item in picked) {
+        selectedItems.add(item);
+      }
     } else {
       selectedItems.clear();
       selectedItems.add(entry);
@@ -1676,17 +1843,10 @@ class _FileManagerViewState extends State<FileManagerView> {
   }
 
   Widget buildPathLocation() {
-    final text = _locationStatus.value == LocationStatus.pathLocation
-        ? controller.directory.value.path
-        : _searchText.value;
-    final textController = TextEditingController(text: text)
-      ..selection = TextSelection.collapsed(offset: text.length);
     return Row(
       children: [
         SvgPicture.asset(
-          _locationStatus.value == LocationStatus.pathLocation
-              ? "assets/folder.svg"
-              : "assets/search.svg",
+          "assets/folder.svg",
           colorFilter: svgColor(Theme.of(context).tabBarTheme.labelColor),
         ),
         Expanded(
@@ -1699,13 +1859,11 @@ class _FileManagerViewState extends State<FileManagerView> {
                 padding: EdgeInsets.only(left: 4.0),
               ),
             ),
-            controller: textController,
+            controller: _pathController,
             onSubmitted: (path) {
               controller.openDirectory(path);
+              _locationStatus.value = LocationStatus.bread;
             },
-            onChanged: _locationStatus.value == LocationStatus.fileSearchBar
-                ? (searchText) => onSearchText(searchText, isLocal)
-                : null,
           ).workaroundFreezeLinuxMint(),
         )
       ],

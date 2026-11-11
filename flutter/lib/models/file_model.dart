@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/file_transfer_logic.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart';
 import 'package:flutter_hbb/utils/event_loop.dart';
 import 'package:get/get.dart';
@@ -501,9 +502,6 @@ class FileController {
     if (!_isPathAllowed(path)) {
       return false;
     }
-    if (!isBack) {
-      pushHistory();
-    }
     final showHidden = options.value.showHidden;
     final isWindows = options.value.isWindows;
     // process /C:\ -> C:\ on Windows
@@ -516,27 +514,44 @@ class FileController {
     final requestGeneration = ++_directoryRequestGeneration;
     try {
       final fd = await fileFetcher.fetchDirectory(path, isLocal, showHidden);
-      if (requestGeneration != _directoryRequestGeneration) {
+      final outcome = directoryOpenOutcome(
+        requestGeneration: requestGeneration,
+        latestGeneration: _directoryRequestGeneration,
+        isBack: isBack,
+        failed: false,
+      );
+      if (!outcome.applied) {
         return true;
+      }
+      if (outcome.recordHistory) {
+        pushHistory();
       }
       fd.format(isWindows, sort: sortBy.value);
       selectedItems.reconcile(fd.entries);
       directory.value = fd;
       return true;
     } catch (e) {
-      if (requestGeneration != _directoryRequestGeneration) {
+      final outcome = directoryOpenOutcome(
+        requestGeneration: requestGeneration,
+        latestGeneration: _directoryRequestGeneration,
+        isBack: isBack,
+        failed: true,
+      );
+      if (outcome.stale) {
         return true;
       }
       debugPrint("Failed to openDirectory $path: $e");
+      final dm = dialogManager;
+      if (dm != null) {
+        msgBox(sessionId, 'custom-error-nook-nocancel-hasclose',
+            translate("Error"), e.toString(), '', dm);
+      }
       return false;
     }
   }
 
   void pushHistory() {
-    if (history.isNotEmpty && history.last == directory.value.path) {
-      return;
-    }
-    history.add(directory.value.path);
+    pushDirectoryHistory(history, directory.value.path);
   }
 
   void goToHomeDirectory() {
@@ -1884,8 +1899,7 @@ class PathUtil {
   }
 
   static String join(String path1, String path2, bool isWindows) {
-    final pathUtil = isWindows ? windowsContext : posixContext;
-    return pathUtil.join(path1, path2);
+    return joinTargetPath(path1, path2, targetIsWindows: isWindows);
   }
 
   static List<String> split(String path, bool isWindows) {
@@ -1950,14 +1964,12 @@ class SelectedItems {
 
   void reconcile(List<Entry> entries) {
     if (items.isEmpty) return;
-    final currentByPath = {for (final entry in entries) entry.path: entry};
-    final reconciled = <Entry>[];
-    for (final item in items) {
-      final current = currentByPath[item.path];
-      if (current != null && current.entryType == item.entryType) {
-        reconciled.add(current);
-      }
-    }
+    final reconciled = reconcileByPath(
+      items.toList(growable: false),
+      entries,
+      (entry) => entry.path,
+      (entry) => entry.entryType,
+    );
     items
       ..clear()
       ..addAll(reconciled);

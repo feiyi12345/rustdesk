@@ -814,5 +814,13 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("On", ""),
         ("Off", ""),
         ("The connection failed because the public server requires both devices to log in with the same account. Open Settings, then Account, sign in on each device, and try again.", ""),
+        ("Send to remote", ""),
+        ("Download to local", ""),
+        ("No matches", ""),
+        ("Choose files", ""),
+        ("Choose folder", ""),
+        ("Selected {} items", ""),
+        ("Pending {} items", ""),
+        ("Target", ""),
     ].iter().cloned().collect();
 }
