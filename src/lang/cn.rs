@@ -814,5 +814,13 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("On", "开"),
         ("Off", "关"),
         ("The connection failed because the public server requires both devices to log in with the same account. Open Settings, then Account, sign in on each device, and try again.", "连接失败：官方公网服务器要求两边使用同一个账号登录后才能连通。请打开「设置」→「账户」，在两台设备上登录同一账号后再试。"),
+        ("Send to remote", "发送到远程"),
+        ("Download to local", "下载到本机"),
+        ("No matches", "没有匹配的文件"),
+        ("Choose files", "选择文件"),
+        ("Choose folder", "选择文件夹"),
+        ("Selected {} items", "已选 {} 项"),
+        ("Pending {} items", "待传输 {} 项"),
+        ("Target", "目标"),
     ].iter().cloned().collect();
 }

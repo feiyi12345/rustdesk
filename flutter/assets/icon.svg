@@ -1,8 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#080E1A"/>
-  <rect x="0.7" y="0.7" width="30.6" height="30.6" rx="6.4" fill="none" stroke="#22D3EE" stroke-opacity="0.72" stroke-width="0.8"/>
-  <path fill="#F4FEFF" d="M2 6H11V11L6.2 20H11V26H2V21L6.8 12H2Z"/>
-  <path fill="#F4FEFF" d="M12.2 6L16.2 6L21.2 26L17.2 26Z"/>
-  <path fill="#F4FEFF" d="M17.2 6L21.2 6L16.2 26L12.2 26Z"/>
-  <path fill="#22D3EE" d="M22.4 6H26.2V21.2H30V26H22.4Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!--
+    Geometric redraw of the selected hybrid mark.
+    The concept raster has an opaque white margin and a soft bevel, so it is
+    not used as an icon file. Two equal-width bands hook through each other
+    on a charcoal rounded tile; the outer corners of this viewBox stay empty.
+  -->
+  <rect width="256" height="256" rx="56" fill="#2C2E32"/>
+  <g fill="none" stroke="#F4F0E6" stroke-width="32" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M68 164 V76 H164 V116"/>
+    <path d="M188 92 V180 H92 V140"/>
+  </g>
 </svg>

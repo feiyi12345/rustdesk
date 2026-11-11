@@ -12,6 +12,7 @@ import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
+import '../../desktop/widgets/compact_home.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 import '../../desktop/widgets/popup_menu.dart';
 import 'dart:math' as math;
@@ -120,10 +121,34 @@ class _PeerCardState extends State<_PeerCard>
           ),
         );
       },
-      child: gestureDetector(
-          child: Obx(() => peerCardUiType.value == PeerUiType.grid
-              ? _buildPeerCard(context, peer, deco)
-              : _buildPeerTile(context, peer, deco))),
+      child: gestureDetector(child: Obx(() {
+        if (CompactHomeScope.isActive(context) &&
+            peerCardUiType.value == PeerUiType.list) {
+          return _buildCompactDeviceRow(peer);
+        }
+        return peerCardUiType.value == PeerUiType.grid
+            ? _buildPeerCard(context, peer, deco)
+            : _buildPeerTile(context, peer, deco);
+      })),
+    );
+  }
+
+  Widget _buildCompactDeviceRow(Peer peer) {
+    hideUsernameOnCard ??=
+        bind.mainGetBuildinOption(key: kHideUsernameOnCard) == 'Y';
+    final host = hideUsernameOnCard == true
+        ? peer.hostname
+        : '${peer.username}${peer.username.isNotEmpty && peer.hostname.isNotEmpty ? '@' : ''}${peer.hostname}';
+    final idText = formatID(peer.id);
+    final title =
+        peer.alias.isNotEmpty ? peer.alias : (host.isNotEmpty ? host : idText);
+    final subtitle = title == idText ? host : idText;
+    return CompactDeviceRow(
+      icon: getPlatformImage(peer.platform, size: 22),
+      title: title,
+      subtitle: subtitle,
+      online: peer.online,
+      actions: checkBoxOrActionMoreLandscape(peer, isTile: true),
     );
   }
 
@@ -468,6 +493,19 @@ class _PeerCardState extends State<_PeerCard>
       } else {
         return icon.marginOnly(right: right);
       }
+    } else if (CompactHomeScope.isActive(context)) {
+      return CompactPeerActions(
+        connectLabel: translate('Connect'),
+        fileLabel: translate('Transfer file'),
+        onConnect: () => widget.connect(context, peer.id),
+        onFile: () => connectInPeerTab(
+          context,
+          peer,
+          widget.tab,
+          isFileTransfer: true,
+        ),
+        trailing: _actionMore(peer),
+      );
     } else {
       return _actionMore(peer);
     }
