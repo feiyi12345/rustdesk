@@ -455,98 +455,104 @@ class _CmHeaderState extends State<_CmHeader>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final theme = Theme.of(context);
+    final ink = theme.textTheme.titleLarge?.color;
+    final muted = theme.textTheme.bodySmall?.color;
+    final dark = theme.brightness == Brightness.dark;
+    final accent = dark ? MyTheme.accentDark : MyTheme.accent;
+    final String typeLabel;
+    switch (client.type_()) {
+      case ClientType.terminal:
+        typeLabel = translate("Terminal");
+        break;
+      case ClientType.file:
+        typeLabel = translate("Transfer file");
+        break;
+      case ClientType.camera:
+        typeLabel = translate("View camera");
+        break;
+      default:
+        typeLabel = client.portForward.isNotEmpty
+            ? "Port Forward: ${client.portForward}"
+            : '';
+    }
+    final String request;
+    switch (client.type_()) {
+      case ClientType.file:
+        request = '想要和这台电脑互传文件';
+        break;
+      case ClientType.camera:
+        request = '想要查看这台电脑的摄像头';
+        break;
+      case ClientType.terminal:
+        request = '想要打开这台电脑的终端';
+        break;
+      default:
+        request = '想要控制这台电脑';
+    }
     return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [
-            Color(0xff00bfe1),
-            Color(0xff0071ff),
-          ],
-        ),
-      ),
-      margin: EdgeInsets.symmetric(horizontal: 5.0, vertical: 10.0),
-      padding: EdgeInsets.only(
-        top: 10.0,
-        bottom: 10.0,
-        left: 10.0,
-        right: 5.0,
-      ),
+      margin: EdgeInsets.fromLTRB(4.0, 8.0, 4.0, 6.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildClientAvatar().marginOnly(right: 10.0),
+          const SizedBox(width: 40),
           Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                _buildClientAvatar(),
+                const SizedBox(height: 8),
                 FittedBox(
                     child: Text(
                   client.name,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    color: ink,
+                    fontWeight: FontWeight.w500,
                     fontSize: 20,
+                    letterSpacing: 0.5,
+                    fontFamilyFallback: MyTheme.serifFallback,
                     overflow: TextOverflow.ellipsis,
                   ),
                   maxLines: 1,
                 )),
-                FittedBox(
-                  child: Text(
-                    "(${client.peerId})",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
+                Text(
+                  client.peerId,
+                  style: TextStyle(color: muted, fontSize: 13, letterSpacing: 1),
                 ),
-                if (client.type_() == ClientType.terminal)
+                if (typeLabel.isNotEmpty)
                   FittedBox(
                     child: Text(
-                      translate("Terminal"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      typeLabel,
+                      style: TextStyle(color: muted, fontSize: 12),
                     ),
                   ),
-                if (client.type_() == ClientType.file)
-                  FittedBox(
-                    child: Text(
-                      translate("Transfer file"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                if (client.type_() == ClientType.camera)
-                  FittedBox(
-                    child: Text(
-                      translate("View camera"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                if (client.portForward.isNotEmpty)
-                  FittedBox(
-                    child: Text(
-                      "Port Forward: ${client.portForward}",
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                  ),
-                SizedBox(height: 10.0),
+                const SizedBox(height: 6),
                 FittedBox(
                     child: Row(
                   children: [
+                    if (client.authorized && !client.disconnected)
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle, color: accent),
+                      ).marginOnly(right: 6),
                     Text(
                       client.authorized
                           ? client.disconnected
                               ? translate("Disconnected")
-                              : translate("Connected")
-                          : "${translate("Request access to your device")}...",
-                      style: TextStyle(color: Colors.white),
-                    ).marginOnly(right: 8.0),
+                              : '正在连接中 ·'
+                          : request,
+                      style: TextStyle(
+                          color: client.authorized ? muted : ink, fontSize: 14),
+                    ).marginOnly(right: 6.0),
                     if (client.authorized)
                       Obx(
                         () => Text(
                           formatDurationToTime(
                             Duration(seconds: _time.value),
                           ),
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: muted, fontSize: 14),
                         ),
                       )
                   ],
@@ -585,28 +591,31 @@ class _CmHeaderState extends State<_CmHeader>
   Widget _buildClientAvatar() {
     return buildAvatarWidget(
           avatar: client.avatar,
-          size: 70,
-          borderRadius: 15,
+          size: 56,
+          borderRadius: 28,
           fallback: _buildInitialAvatar(),
         ) ??
         _buildInitialAvatar();
   }
 
   Widget _buildInitialAvatar() {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      width: 70,
-      height: 70,
+      width: 56,
+      height: 56,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: str2color(client.name),
-        borderRadius: BorderRadius.circular(15.0),
+        color: dark ? MyTheme.techCard : MyTheme.paperCard,
+        shape: BoxShape.circle,
+        border: Border.all(color: dark ? MyTheme.techLine : MyTheme.paperLine),
       ),
       child: Text(
         client.name.isNotEmpty ? client.name[0] : '?',
         style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          fontSize: 55,
+          fontWeight: FontWeight.w500,
+          color: Theme.of(context).textTheme.titleLarge?.color,
+          fontSize: 24,
+          fontFamilyFallback: MyTheme.serifFallback,
         ),
       ),
     );
@@ -627,15 +636,23 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
   Widget buildPermissionIcon(bool enabled, IconData iconData,
       Function(bool)? onTap, String tooltipText,
       {required bool canModify}) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final ink = Theme.of(context).textTheme.titleLarge?.color;
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
     return Tooltip(
       message: "$tooltipText: ${enabled ? "ON" : "OFF"}",
       waitDuration: Duration.zero,
       child: Container(
         decoration: BoxDecoration(
           color: enabled
-              ? (canModify ? MyTheme.accent : MyTheme.accent.withOpacity(0.6))
-              : Colors.grey[700],
+              ? (dark ? MyTheme.techCard : MyTheme.paperCard)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10.0),
+          border: Border.all(
+            color: enabled
+                ? (dark ? MyTheme.techMuted : MyTheme.hoverBorder)
+                : (dark ? MyTheme.techLine : MyTheme.paperLine),
+          ),
         ),
         padding: EdgeInsets.all(8.0),
         child: InkWell(
@@ -649,7 +666,9 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
               Expanded(
                 child: Icon(
                   iconData,
-                  color: Colors.white,
+                  color: enabled
+                      ? (canModify ? ink : ink?.withOpacity(0.6))
+                      : muted?.withOpacity(0.6),
                 ),
               ),
             ],
@@ -671,26 +690,17 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
       height: 160.0,
       margin: EdgeInsets.all(5.0),
       padding: EdgeInsets.all(5.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        color: Theme.of(context).colorScheme.background,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 1,
-            offset: Offset(0, 1.5),
-          ),
-        ],
-      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            translate("Permissions"),
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ).marginOnly(left: 4.0, bottom: 8.0),
+            client.authorized ? '随时可收回权限' : '允许对方',
+            style: TextStyle(
+              fontSize: 12,
+              letterSpacing: 1,
+              color: Theme.of(context).textTheme.bodySmall?.color,
+            ),
+          ).marginOnly(left: spacing, bottom: 8.0),
           Expanded(
             child: GridView.count(
               crossAxisCount: crossAxisCount,
@@ -1038,9 +1048,9 @@ class _CmControlPanel extends StatelessWidget {
           children: [
             Expanded(
               child: buildButton(context,
-                  color: Colors.redAccent,
+                  color: MyTheme.danger,
                   onClick: handleDisconnect,
-                  text: 'Disconnect',
+                  text: '断开连接',
                   icon: Icon(
                     Icons.link_off_rounded,
                     color: Colors.white,
@@ -1100,8 +1110,24 @@ class _CmControlPanel extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Expanded(
+              child: buildButton(
+                context,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? MyTheme.techCard
+                    : MyTheme.paperCard,
+                border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? MyTheme.techLine
+                        : MyTheme.paperLine),
+                onClick: handleDisconnect,
+                text: showAccept ? '拒绝' : 'Cancel',
+                textColor: null,
+              ),
+            ),
             if (showAccept)
               Expanded(
+                flex: 2,
                 child: Column(
                   children: [
                     buildButton(
@@ -1111,22 +1137,12 @@ class _CmControlPanel extends StatelessWidget {
                         handleAccept(context);
                         windowManager.minimize();
                       },
-                      text: 'Accept',
+                      text: '接受',
                       textColor: Colors.white,
                     ),
                   ],
                 ),
               ),
-            Expanded(
-              child: buildButton(
-                context,
-                color: Colors.transparent,
-                border: Border.all(color: Colors.grey),
-                onClick: handleDisconnect,
-                text: 'Cancel',
-                textColor: null,
-              ),
-            ),
           ],
         ),
       ],
@@ -1159,9 +1175,9 @@ class _CmControlPanel extends StatelessWidget {
         ),
       );
     }
-    final borderRadius = BorderRadius.circular(10.0);
+    final borderRadius = BorderRadius.circular(12.0);
     final btn = Container(
-      height: 28,
+      height: 40,
       decoration: BoxDecoration(
           color: color, borderRadius: borderRadius, border: border),
       child: InkWell(

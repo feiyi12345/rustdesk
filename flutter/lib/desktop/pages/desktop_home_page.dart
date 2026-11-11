@@ -44,6 +44,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var watchIsInputMonitoring = false;
   Timer? _updateTimer;
   bool isCardClosed = false;
+  bool _permanentPasswordSet = false;
+  int _permanentPasswordPollTick = 0;
+
+  Future<void> _refreshPermanentPasswordSet() async {
+    final set =
+        (await bind.mainGetCommon(key: "permanent-password-set")) == "true";
+    if (mounted && set != _permanentPasswordSet) {
+      setState(() => _permanentPasswordSet = set);
+    }
+  }
 
   final RxBool _block = false.obs;
 
@@ -79,13 +89,17 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           alignment: Alignment.center,
           child: loadPowered(context),
         ),
-      Align(
-        alignment: Alignment.center,
-        child: loadLogo(),
-      ),
+      if (bind.isCustomClient())
+        Align(
+          alignment: Alignment.center,
+          child: loadLogo(),
+        )
+      else
+        _buildBrandHeader(context),
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
+      if (!isOutgoingOnly) buildPermanentPasswordBoard(context),
       Obx(() {
         final cards = buildHelpCards(stateGlobal.updateUrl.value);
         if (isIncomingOnly && isInHomePage()) {
@@ -109,21 +123,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ).marginOnly(bottom: 6, right: 6)
       ]);
     }
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 264.0,
-        decoration: BoxDecoration(
-          gradient: dark
-              ? const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF101A2C), MyTheme.techBg],
-                )
-              : null,
-          color: dark ? null : Theme.of(context).colorScheme.background,
-        ),
+        width: isIncomingOnly ? 280.0 : 300.0,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Stack(
           children: [
             Column(
@@ -178,51 +182,101 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
+  Widget _buildBrandHeader(BuildContext context) {
+    final ink = Theme.of(context).textTheme.titleLarge?.color;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 18, 8, 0),
+      child: Row(
+        children: [
+          Text(
+            kAppDisplayName,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 2,
+              color: ink,
+              fontFamilyFallback: MyTheme.serifFallback,
+            ),
+          ),
+          const Spacer(),
+          if (!bind.isDisableSettings())
+            _actionIcon(Icons.settings_outlined, 'Settings',
+                DesktopTabPage.onAddSetting),
+        ],
+      ),
+    );
+  }
+
+  Widget _chipButton(String text, VoidCallback onPressed) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 28),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          backgroundColor: dark ? MyTheme.techLine : MyTheme.paperChip,
+          foregroundColor: dark ? MyTheme.techText : MyTheme.paperInk,
+          textStyle: const TextStyle(fontSize: 12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+        child: Text(text),
+      ),
+    );
+  }
+
+  Widget _cardShell({required Widget child}) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: dark ? MyTheme.techCard : MyTheme.paperCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: dark ? MyTheme.techLine : MyTheme.paperLine),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _cardLabel(String label) {
+    return Expanded(
+      child: AutoSizeText(
+        label,
+        maxLines: 1,
+        style: TextStyle(
+          fontSize: 12,
+          letterSpacing: 1,
+          color: Theme.of(context).textTheme.bodySmall?.color,
+        ),
+      ),
+    );
+  }
+
   Widget _infoCard({
     required String label,
     required TextEditingController controller,
     required double fontSize,
     List<Widget> actions = const [],
   }) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final muted = Theme.of(context).textTheme.bodySmall?.color;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-      padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
-      decoration: BoxDecoration(
-        color: dark ? MyTheme.techCard : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: dark
-              ? MyTheme.accent.withOpacity(0.35)
-              : Theme.of(context).dividerColor,
-        ),
-      ),
+    return _cardShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AutoSizeText(
-            label,
-            maxLines: 1,
-            style: TextStyle(fontSize: 13, color: muted),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: controller,
-                  readOnly: true,
-                  decoration: const InputDecoration.collapsed(hintText: ''),
-                  style: TextStyle(
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
-                ).workaroundFreezeLinuxMint(),
-              ),
-              ...actions,
-            ],
-          ),
+          Row(children: [_cardLabel(label), ...actions]),
+          TextFormField(
+            controller: controller,
+            readOnly: true,
+            decoration: const InputDecoration.collapsed(hintText: ''),
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 1.5,
+            ),
+          ).workaroundFreezeLinuxMint().marginOnly(top: 6),
         ],
       ),
     );
@@ -231,13 +285,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
     return _infoCard(
-      label: translate("ID"),
+      label: '本机 ID',
       controller: model.serverId,
-      fontSize: 22,
+      fontSize: 24,
       actions: [
-        _actionIcon(Icons.copy_rounded, 'Copy to clipboard', () => _copy(model.serverId.text)),
-        _actionIcon(Icons.settings_outlined, 'Settings',
-            DesktopTabPage.onAddSetting),
+        _chipButton('复制', () => _copy(model.serverId.text)),
       ],
     );
   }
@@ -247,21 +299,77 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       builder: (context, model, child) {
         final showOneTime = model.approveMode != 'click' &&
             model.verificationMethod != kUsePermanentPassword;
+        if (!showOneTime) return const SizedBox.shrink();
         return _infoCard(
           label: translate("One-time Password"),
           controller: model.serverPasswd,
-          fontSize: 18,
+          fontSize: 22,
           actions: [
-            if (showOneTime)
-              _actionIcon(Icons.copy_rounded, 'Copy to clipboard',
-                  () => _copy(model.serverPasswd.text)),
-            if (showOneTime)
-              _actionIcon(Icons.refresh_rounded, 'Refresh Password',
-                  () => bind.mainUpdateTemporaryPassword()),
-            if (!bind.isDisableSettings())
-              _actionIcon(Icons.edit_outlined, 'Change Password',
-                  () => DesktopSettingPage.switch2page(SettingsTabKey.safety)),
+            _chipButton('复制', () => _copy(model.serverPasswd.text)),
+            _chipButton('换一个', () => bind.mainUpdateTemporaryPassword()),
           ],
+        );
+      },
+    );
+  }
+
+  Widget buildPermanentPasswordBoard(BuildContext context) {
+    return Consumer<ServerModel>(
+      builder: (context, model, child) {
+        if (model.approveMode == 'click') return const SizedBox.shrink();
+        final set = _permanentPasswordSet;
+        final accepted = model.verificationMethod != kUseTemporaryPassword;
+        final dark = Theme.of(context).brightness == Brightness.dark;
+        final accent = dark ? MyTheme.accentDark : MyTheme.accent;
+        final muted = Theme.of(context).textTheme.bodySmall?.color;
+        final String status;
+        if (!set) {
+          status = '未设置，设置后可无人值守连接';
+        } else if (accepted) {
+          status = '已设置，无人值守时可用';
+        } else {
+          status = '已设置，当前只接受一次性密码';
+        }
+        final canChange =
+            !bind.isDisableSettings() && !isChangePermanentPasswordDisabled();
+        return _cardShell(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                _cardLabel('长期密码'),
+                if (canChange)
+                  _chipButton(set ? '修改' : '设置', () async {
+                    await setPasswordDialog();
+                    await _refreshPermanentPasswordSet();
+                  }),
+              ]),
+              Text(
+                set ? '••••••••' : '—',
+                style: const TextStyle(fontSize: 20, letterSpacing: 4),
+              ).marginOnly(top: 6),
+              Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: set && accepted ? accent : muted,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                          fontSize: 12, color: set && accepted ? accent : muted),
+                    ),
+                  ),
+                ],
+              ).marginOnly(top: 6),
+            ],
+          ),
         );
       },
     );
@@ -506,6 +614,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         systemError = error;
         setState(() {});
       }
+      if (_permanentPasswordPollTick++ % 10 == 0) {
+        await _refreshPermanentPasswordSet();
+      }
       final v = await mainGetBoolOption(kOptionStopService);
       if (v != svcStopped.value) {
         svcStopped.value = v;
@@ -665,7 +776,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 }
 
-void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
+Future<void> setPasswordDialog({VoidCallback? notEmptyCallback}) async {
   final p0 = TextEditingController(text: "");
   final p1 = TextEditingController(text: "");
   var errMsg0 = "";
@@ -690,7 +801,7 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
   final showStatusTipOnMobile =
       statusTip.isNotEmpty && !isDesktop && !isWebDesktop;
 
-  gFFI.dialogManager.show((setState, close, context) {
+  await gFFI.dialogManager.show((setState, close, context) {
     updateCanSubmit() {
       canSubmit = p0.text.trim().isNotEmpty || p1.text.trim().isNotEmpty;
     }

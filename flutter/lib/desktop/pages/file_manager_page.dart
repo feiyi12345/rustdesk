@@ -399,21 +399,21 @@ class _FileManagerPageState extends State<FileManagerPage>
     );
   }
 
+  // Files dropped from the OS go to the remote side whichever pane catches
+  // them; the local pane already shows local files, so nothing else fits.
   void handleDragDone(DropDoneDetails details, bool isLocal) {
-    if (isLocal) {
-      // ignore local
-      return;
-    }
-    final items = SelectedItems(isLocal: false);
+    final items = SelectedItems(isLocal: true);
     for (var file in details.files) {
-      final f = File(file.path);
+      final isDir = FileSystemEntity.isDirectorySync(file.path);
       items.add(Entry()
         ..path = file.path
         ..name = file.name
-        ..size = FileSystemEntity.isDirectorySync(f.path) ? 0 : f.lengthSync());
+        ..entryType = isDir ? 0 : 4
+        ..size = isDir ? 0 : File(file.path).lengthSync());
     }
-    final otherSideData = model.localController.directoryData();
-    model.remoteController.sendFiles(items, otherSideData);
+    if (items.items.isEmpty) return;
+    final otherSideData = model.remoteController.directoryData();
+    model.localController.sendFiles(items, otherSideData);
   }
 }
 
@@ -1121,9 +1121,10 @@ class _FileManagerViewState extends State<FileManagerView> {
       },
       child: Obx(() {
         final entries = controller.directory.value.entries;
+        final searchLower = _searchText.value.toLowerCase();
         final filteredEntries = _searchText.isNotEmpty
             ? entries.where((element) {
-                return element.name.contains(_searchText.value);
+                return element.name.toLowerCase().contains(searchLower);
               }).toList(growable: false)
             : entries;
         // Keep rows lazy so large directories only build visible list items.
@@ -1147,6 +1148,20 @@ class _FileManagerViewState extends State<FileManagerView> {
 
           onSecondaryTap() {
             final items = [
+              if (!entry.isDrive)
+                mod_menu.PopupMenuItem(
+                  child: Text(isLocal ? '发送到对方' : '下载到本机'),
+                  height: CustomPopupMenuTheme.height,
+                  onTap: () {
+                    if (!selectedItems.items.contains(entry)) {
+                      selectedItems.clear();
+                      selectedItems.add(entry);
+                    }
+                    controller.sendFiles(
+                        selectedItems, controller.getOtherSideDirectoryData());
+                    selectedItems.clear();
+                  },
+                ),
               if (!entry.isDrive &&
                   versionCmp(_ffi.ffiModel.pi.version, "1.3.0") >= 0)
                 mod_menu.PopupMenuItem(

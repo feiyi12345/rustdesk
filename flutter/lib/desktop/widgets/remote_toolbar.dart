@@ -330,8 +330,8 @@ class _ToolbarTheme {
   static Color inactiveColor = Colors.grey[800]!;
   static Color hoverInactiveColor = Colors.grey[850]!;
 
-  static const Color redColor = Colors.redAccent;
-  static const Color hoverRedColor = Colors.red;
+  static const Color redColor = MyTheme.danger;
+  static const Color hoverRedColor = Color(0xFF7E2E20);
   // kMinInteractiveDimension
   static const double height = 20.0;
   static const double dividerHeight = 12.0;
@@ -484,6 +484,31 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
   int _dragEpoch = 0;
 
   int get windowId => stateGlobal.windowId;
+
+  // Touching the top edge reveals a collapsed toolbar; it tucks itself away
+  // again shortly after the cursor goes back to the remote image.
+  bool _hoverRevealed = false;
+  Timer? _hoverHideTimer;
+
+  void _revealOnHover() {
+    if (collapse.isFalse || _dragging.isTrue) return;
+    _hoverRevealed = true;
+    _hoverHideTimer?.cancel();
+    collapse.value = false;
+  }
+
+  void _scheduleHoverHide() {
+    if (!_hoverRevealed) return;
+    _hoverHideTimer?.cancel();
+    _hoverHideTimer = Timer(const Duration(milliseconds: 800), () {
+      if (!mounted || !_hoverRevealed) return;
+      if (!_isCursorOverImage || _dragging.isTrue) return;
+      _hoverRevealed = false;
+      if (!pin && collapse.isFalse) {
+        collapse.value = true;
+      }
+    });
+  }
 
   void _setFullscreen(bool v) {
     stateGlobal.setFullscreen(v);
@@ -655,6 +680,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       if (enter) {
         triggerAutoHide();
         _isCursorOverImage = true;
+        _scheduleHoverHide();
       } else {
         _isCursorOverImage = false;
       }
@@ -677,6 +703,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
 
   @override
   dispose() {
+    _hoverHideTimer?.cancel();
     ++_dockingOptionSyncSerial;
     widget.onEnterOrLeaveImageCleaner(identityHashCode(this));
     super.dispose();
@@ -734,6 +761,18 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
               return _buildDragPreview(context, pe, pf, _toolbarSize.value);
             }),
           ),
+          if (edge == _ToolbarEdge.top && collapse.isTrue && _dragging.isFalse)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 4,
+              child: MouseRegion(
+                opaque: false,
+                hitTestBehavior: HitTestBehavior.translucent,
+                onEnter: (_) => _revealOnHover(),
+              ),
+            ),
           toolbar,
         ],
       );
@@ -771,7 +810,12 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       final borderRadius = _collapseHandleBorderRadius(edge);
       return Offstage(
         offstage: _dragging.isTrue,
-        child: Material(
+        child: MouseRegion(
+          opaque: false,
+          onEnter: (_) {
+            if (edge == _ToolbarEdge.top) _revealOnHover();
+          },
+          child: Material(
           elevation: _ToolbarTheme.elevation,
           shadowColor: MyTheme.color(context).shadow,
           borderRadius: borderRadius,
@@ -795,6 +839,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
             setMinimize: _minimize,
             borderRadius: borderRadius,
           ),
+        ),
         ),
       );
     });
@@ -852,7 +897,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
     }
     if (!isWeb) toolbarItems.add(_RecordMenu());
     toolbarItems.add(_CloseMenu(id: widget.id, ffi: widget.ffi));
-    final toolbarBorderRadius = BorderRadius.all(Radius.circular(4.0));
+    final toolbarBorderRadius = BorderRadius.all(Radius.circular(10.0));
     // innerAxis: how the toolbar icons themselves flow.
     // outerAxis: how the toolbar block and the handle stack against each other
     // (perpendicular to the dock edge, so the handle hangs off the interior face).

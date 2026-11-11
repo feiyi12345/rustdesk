@@ -249,6 +249,10 @@ void runMultiWindow(
           peerId: argument['id'] as String?,
           display: argument['display'] as int?,
         );
+        // Remote control opens fullscreen; the top-edge toolbar exits it.
+        // The delay keeps the restored frame from undoing fullscreen.
+        Future.delayed(const Duration(milliseconds: 400),
+            () => stateGlobal.setFullscreen(true));
       }
       break;
     case kAppTypeDesktopFileTransfer:

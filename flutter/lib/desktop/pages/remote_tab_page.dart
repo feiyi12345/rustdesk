@@ -446,6 +446,10 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
         Future.delayed(Duration(milliseconds: isWindows ? 100 : 0), () async {
           await windowOnTop(windowId());
         });
+        if (screenRect == null) {
+          Future.delayed(const Duration(milliseconds: 400),
+              () => stateGlobal.setFullscreen(true));
+        }
       });
       ConnectionTypeState.init(id);
       tabController.add(TabInfo(

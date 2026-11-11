@@ -167,31 +167,31 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
   final Color? divider;
 
   static final light = ColorThemeExtension(
-    border: Color(0xFFCCCCCC),
-    border2: Color(0xFFBBBBBB),
+    border: Color(0xFFE4DED4),
+    border2: Color(0xFFC9C0B2),
     border3: Colors.black26,
-    highlight: Color(0xFFE5E5E5),
+    highlight: Color(0xFFEDE7DC),
     drag_indicator: Colors.grey[800],
     shadow: Colors.black,
-    errorBannerBg: Color(0xFFFDEEEB),
-    me: Colors.green,
-    toastBg: Colors.black.withOpacity(0.6),
-    toastText: Colors.white,
-    divider: Colors.black38,
+    errorBannerBg: Color(0xFFF7E6E1),
+    me: Color(0xFF3E5C46),
+    toastBg: Color(0xE01F1D1A),
+    toastText: Color(0xFFF6F3EE),
+    divider: Color(0xFFE4DED4),
   );
 
   static final dark = ColorThemeExtension(
-    border: Color(0xFF1E3A5F),
-    border2: Color(0xFF2A4A6E),
-    border3: Color(0x6622D3EE),
-    highlight: Color(0xFF1A2740),
-    drag_indicator: Color(0xFF22D3EE),
-    shadow: Color(0x6622D3EE),
+    border: Color(0xFF3A3631),
+    border2: Color(0xFF4A453E),
+    border3: Color(0x66A39B8F),
+    highlight: Color(0xFF2E2B27),
+    drag_indicator: Color(0xFFA39B8F),
+    shadow: Colors.black,
     errorBannerBg: Color(0xFF3A1424),
-    me: Color(0xFF34D399),
-    toastBg: Color(0xEE101826),
-    toastText: Color(0xFFE7F0FF),
-    divider: Color(0xFF1E3A5F),
+    me: Color(0xFF8DB596),
+    toastBg: Color(0xEE2A2724),
+    toastText: Color(0xFFECE7DF),
+    divider: Color(0xFF3A3631),
   );
 
   @override
@@ -249,24 +249,39 @@ class MyTheme {
   MyTheme._();
 
   static const Color grayBg = Color(0xFFEFEFF2);
-  // Cyan / electric blue. Shared by the dark tech theme and the light option.
-  static const Color accent = Color(0xFF22D3EE);
-  static const Color accent50 = Color(0x7722D3EE);
-  static const Color accent80 = Color(0xAA0891B2);
-  static const Color canvasColor = Color(0xFF070B14);
-  static const Color border = Color(0xFF1E3A5F);
-  static const Color idColor = Color(0xFF67E8F9);
-  static const Color darkGray = Color.fromARGB(255, 139, 163, 199);
-  static const Color cmIdColor = Color(0xFF34D399);
+  // "Paper" look: warm off-white ground, ink text, moss accent.
+  static const Color accent = Color(0xFF3E5C46);
+  static const Color accent50 = Color(0x773E5C46);
+  static const Color accent80 = Color(0xAA3E5C46);
+  static const Color accentDark = Color(0xFF8DB596);
+  static const Color canvasColor = Color(0xFF1A1917);
+  static const Color border = Color(0xFFE4DED4);
+  static const Color idColor = Color(0xFF3E5C46);
+  static const Color darkGray = Color(0xFF6A645B);
+  static const Color cmIdColor = Color(0xFF3E5C46);
   static const Color dark = Colors.black87;
-  static const Color button = Color(0xFF06B6D4);
-  static const Color hoverBorder = Color(0xFF67E8F9);
-  static const Color techBg = Color(0xFF070B14);
-  static const Color techSurface = Color(0xFF101826);
-  static const Color techCard = Color(0xFF152033);
-  static const Color techLine = Color(0xFF1E3A5F);
-  static const Color techText = Color(0xFFE7F0FF);
-  static const Color techMuted = Color(0xFF8BA3C7);
+  static const Color button = Color(0xFF3E5C46);
+  static const Color hoverBorder = Color(0xFFC9C0B2);
+  static const Color danger = Color(0xFF9B3B2A);
+  static const Color paperBg = Color(0xFFF6F3EE);
+  static const Color paperCard = Color(0xFFFFFFFF);
+  static const Color paperChip = Color(0xFFF1ECE3);
+  static const Color paperLine = Color(0xFFE4DED4);
+  static const Color paperInk = Color(0xFF1F1D1A);
+  static const Color paperMuted = Color(0xFF6A645B);
+  static const Color techBg = Color(0xFF1A1917);
+  static const Color techSurface = Color(0xFF211F1C);
+  static const Color techCard = Color(0xFF2A2724);
+  static const Color techLine = Color(0xFF3A3631);
+  static const Color techText = Color(0xFFECE7DF);
+  static const Color techMuted = Color(0xFFA39B8F);
+  static const List<String> serifFallback = [
+    'Noto Serif SC',
+    'Source Han Serif SC',
+    'Songti SC',
+    'STSong',
+    'SimSun',
+  ];
   static const List<String> cjkFallback = [
     'Microsoft YaHei UI',
     'Microsoft YaHei',
@@ -390,45 +405,83 @@ class MyTheme {
     // https://stackoverflow.com/questions/77537315/after-upgrading-to-flutter-3-16-the-app-bar-background-color-button-size-and
     useMaterial3: false,
     brightness: Brightness.light,
-    hoverColor: Color.fromARGB(255, 224, 224, 224),
-    scaffoldBackgroundColor: Colors.white,
-    dialogBackgroundColor: Colors.white,
+    primaryColor: accent,
+    hoverColor: Color(0xFFEDE7DC),
+    scaffoldBackgroundColor: paperBg,
+    dialogBackgroundColor: paperBg,
     appBarTheme: AppBarTheme(
+      backgroundColor: paperBg,
+      foregroundColor: paperInk,
+      elevation: 0,
       shadowColor: Colors.transparent,
     ),
+    dividerTheme: DividerThemeData(
+      color: paperLine,
+      thickness: 1,
+      space: 1,
+    ),
+    iconTheme: IconThemeData(color: paperMuted),
     dialogTheme: DialogTheme(
-      elevation: 15,
+      backgroundColor: paperBg,
+      elevation: 12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18.0),
+        borderRadius: BorderRadius.circular(16.0),
         side: BorderSide(
           width: 1,
-          color: grayBg,
+          color: paperLine,
         ),
       ),
     ),
     scrollbarTheme: scrollbarTheme,
     inputDecorationTheme: isDesktop
         ? InputDecorationTheme(
-            fillColor: grayBg,
+            fillColor: paperCard,
             filled: true,
             isDense: true,
+            hintStyle: TextStyle(color: paperMuted),
+            labelStyle: TextStyle(color: paperMuted),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: paperLine),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: paperLine),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: accent, width: 1.4),
             ),
           )
         : null,
     textTheme: const TextTheme(
-        titleLarge: TextStyle(fontSize: 19, color: Colors.black87),
-        titleSmall: TextStyle(fontSize: 14, color: Colors.black87),
-        bodySmall: TextStyle(fontSize: 12, color: Colors.black87, height: 1.25),
-        bodyMedium:
-            TextStyle(fontSize: 14, color: Colors.black87, height: 1.25),
-        labelLarge: TextStyle(fontSize: 16.0, color: MyTheme.accent80)),
-    cardColor: grayBg,
-    hintColor: Color(0xFFAAAAAA),
+        titleLarge: TextStyle(
+            fontSize: 19,
+            color: paperInk,
+            fontWeight: FontWeight.w500,
+            fontFamilyFallback: serifFallback,
+            letterSpacing: 0.5,
+            height: 1.3),
+        titleSmall: TextStyle(fontSize: 14, color: paperInk),
+        bodySmall: TextStyle(fontSize: 12, color: paperMuted, height: 1.35),
+        bodyMedium: TextStyle(fontSize: 14, color: paperInk, height: 1.35),
+        labelLarge: TextStyle(fontSize: 16.0, color: MyTheme.accent)),
+    cardColor: paperCard,
+    cardTheme: CardTheme(
+      color: paperCard,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        side: BorderSide(color: paperLine),
+      ),
+    ),
+    hintColor: paperMuted,
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
-      labelColor: Colors.black87,
+      labelColor: paperInk,
+      unselectedLabelColor: paperMuted,
+      indicatorColor: paperInk,
     ),
     tooltipTheme: tooltipTheme(),
     splashColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
@@ -447,38 +500,58 @@ class MyTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: MyTheme.button,
-        foregroundColor: const Color(0xFF04131C),
+        foregroundColor: Colors.white,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(10.0),
         ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        backgroundColor: grayBg,
-        foregroundColor: Colors.black87,
+        backgroundColor: paperCard,
+        foregroundColor: paperInk,
+        side: BorderSide(color: paperLine, width: 1),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(10.0),
         ),
       ),
     ),
-    switchTheme: switchTheme(),
+    switchTheme: switchTheme().copyWith(
+      thumbColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.selected)) return Colors.white;
+        return Colors.white;
+      }),
+      trackColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.selected)) return accent;
+        return Color(0xFFD9D2C6);
+      }),
+    ),
     radioTheme: radioTheme(),
     checkboxTheme: checkboxTheme,
     listTileTheme: listTileTheme,
     menuBarTheme: MenuBarThemeData(
         style:
-            MenuStyle(backgroundColor: MaterialStatePropertyAll(Colors.white))),
+            MenuStyle(backgroundColor: MaterialStatePropertyAll(paperCard))),
     colorScheme: ColorScheme.light(
-        primary: Colors.blue, secondary: accent, background: grayBg),
+      primary: accent,
+      secondary: accent,
+      background: paperBg,
+      surface: paperCard,
+      onPrimary: Colors.white,
+      onSurface: paperInk,
+      onBackground: paperInk,
+      error: danger,
+    ),
     popupMenuTheme: PopupMenuThemeData(
-        color: Colors.white,
+        color: paperCard,
+        textStyle: TextStyle(color: paperInk, fontSize: 14),
         shape: RoundedRectangleBorder(
           side: BorderSide(
               color: (isDesktop || isWebDesktop)
-                  ? Color(0xFFECECEC)
+                  ? paperLine
                   : Colors.transparent),
-          borderRadius: BorderRadius.all(Radius.circular(8.0)),
+          borderRadius: BorderRadius.all(Radius.circular(12.0)),
         )),
   ).copyWith(
     extensions: <ThemeExtension<dynamic>>[
@@ -490,8 +563,8 @@ class MyTheme {
     fontFamilyFallback: cjkFallback,
     useMaterial3: false,
     brightness: Brightness.dark,
-    primaryColor: accent,
-    hoverColor: Color(0x3322D3EE),
+    primaryColor: accentDark,
+    hoverColor: Color(0x22ECE7DF),
     scaffoldBackgroundColor: techBg,
     dialogBackgroundColor: techSurface,
     appBarTheme: AppBarTheme(
@@ -535,20 +608,25 @@ class MyTheme {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: accent, width: 1.4),
+              borderSide: BorderSide(color: accentDark, width: 1.4),
             ),
           )
         : null,
     textTheme: const TextTheme(
       titleLarge: TextStyle(
-          fontSize: 19, color: techText, fontWeight: FontWeight.w600, height: 1.3),
+          fontSize: 19,
+          color: techText,
+          fontWeight: FontWeight.w500,
+          fontFamilyFallback: serifFallback,
+          letterSpacing: 0.5,
+          height: 1.3),
       titleSmall: TextStyle(fontSize: 14, color: techText),
       bodySmall: TextStyle(fontSize: 12, height: 1.35, color: techMuted),
       bodyMedium: TextStyle(fontSize: 14, height: 1.35, color: techText),
       labelLarge: TextStyle(
         fontSize: 16.0,
         fontWeight: FontWeight.bold,
-        color: accent,
+        color: accentDark,
       ),
     ),
     cardColor: techCard,
@@ -565,7 +643,7 @@ class MyTheme {
     tabBarTheme: const TabBarTheme(
       labelColor: techText,
       unselectedLabelColor: techMuted,
-      indicatorColor: accent,
+      indicatorColor: accentDark,
     ),
     tooltipTheme: tooltipTheme(),
     splashColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
@@ -585,12 +663,12 @@ class MyTheme {
         : mobileTextButtonTheme,
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: MyTheme.accent,
-        foregroundColor: const Color(0xFF04131C),
+        backgroundColor: MyTheme.accentDark,
+        foregroundColor: techBg,
         disabledForegroundColor: Colors.white70,
         disabledBackgroundColor: Colors.white10,
         elevation: 0,
-        shadowColor: accent.withOpacity(0.6),
+        shadowColor: accentDark.withOpacity(0.6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10.0),
         ),
@@ -599,7 +677,7 @@ class MyTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         backgroundColor: techCard,
-        side: BorderSide(color: accent.withOpacity(0.45), width: 1),
+        side: BorderSide(color: accentDark.withOpacity(0.45), width: 1),
         disabledForegroundColor: Colors.white70,
         foregroundColor: techText,
         shape: RoundedRectangleBorder(
@@ -609,12 +687,12 @@ class MyTheme {
     ),
     switchTheme: switchTheme().copyWith(
       thumbColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) return accent;
+        if (states.contains(MaterialState.selected)) return accentDark;
         return techMuted;
       }),
       trackColor: MaterialStateProperty.resolveWith((states) {
         if (states.contains(MaterialState.selected)) {
-          return accent.withOpacity(0.45);
+          return accentDark.withOpacity(0.45);
         }
         return techLine;
       }),
@@ -626,11 +704,11 @@ class MyTheme {
         style: MenuStyle(
             backgroundColor: MaterialStatePropertyAll(techCard))),
     colorScheme: ColorScheme.dark(
-      primary: accent,
-      secondary: button,
+      primary: accentDark,
+      secondary: accentDark,
       background: techSurface,
       surface: techCard,
-      onPrimary: Color(0xFF04131C),
+      onPrimary: techBg,
       onSurface: techText,
       onBackground: techText,
     ),
@@ -655,7 +733,7 @@ class MyTheme {
   static Future<void> changeDarkMode(ThemeMode mode) async {
     Get.changeThemeMode(mode);
     if (desktopType == DesktopType.main || isAndroid || isIOS || isWeb) {
-      // "system" must be stored explicitly. An empty value is the dark default.
+      // "system" must be stored explicitly. An empty value is the light default.
       final stored = mode == ThemeMode.system ? 'system' : mode.toShortString();
       await bind.mainSetLocalOption(key: kCommConfKeyTheme, value: stored);
       if (!isWeb) await bind.mainChangeTheme(dark: mode.toShortString());
@@ -695,7 +773,7 @@ class MyTheme {
       case "dark":
         return ThemeMode.dark;
       default:
-        return ThemeMode.dark;
+        return ThemeMode.light;
     }
   }
 }
