@@ -2511,7 +2511,35 @@ fn apply_fork_defaults() {
         .unwrap()
         .entry(keys::OPTION_ALLOW_AUTO_UPDATE.to_owned())
         .or_insert_with(|| "Y".to_owned());
+    config::DEFAULT_DISPLAY_SETTINGS
+        .write()
+        .unwrap()
+        .entry(keys::OPTION_CUSTOM_FPS.to_owned())
+        .or_insert_with(|| FORK_DEFAULT_FPS.to_string());
+    // Recording moves from the toolbar into the Control menu; printer setup is rarely used.
+    config::DEFAULT_LOCAL_SETTINGS
+        .write()
+        .unwrap()
+        .entry(keys::OPTION_HIDE_RECORDING_BUTTON.to_owned())
+        .or_insert_with(|| "Y".to_owned());
+    config::BUILTIN_SETTINGS
+        .write()
+        .unwrap()
+        .entry(keys::OPTION_HIDE_REMOTE_PRINTER_SETTINGS.to_owned())
+        .or_insert_with(|| "Y".to_owned());
+    // The built-in server has no account API, so login would only fail.
+    if Config::get_option(keys::OPTION_API_SERVER).is_empty() {
+        config::HARD_SETTINGS
+            .write()
+            .unwrap()
+            .entry("disable-account".to_owned())
+            .or_insert_with(|| "Y".to_owned());
+    }
 }
+
+/// The fork runs its own relay, so views ask for this rate; the host's QoS
+/// still lowers it on a slow link.
+pub const FORK_DEFAULT_FPS: i32 = 60;
 
 pub fn load_custom_client() {
     apply_fork_defaults();
