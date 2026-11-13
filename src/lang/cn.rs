@@ -822,5 +822,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Selected {} items", "已选 {} 项"),
         ("Pending {} items", "待传输 {} 项"),
         ("Target", "目标"),
+        ("Desktop", "桌面"),
+        ("Failed to open directory", "无法打开目录"),
     ].iter().cloned().collect();
 }
