@@ -3401,6 +3401,11 @@ impl LoginConfigHandler {
                 *self.custom_fps.lock().unwrap() = Some(custom_fps as _);
             }
         }
+        #[cfg(feature = "flutter")]
+        if q != "custom" && (!crate::using_public_server() || self.direct == Some(true)) {
+            msg.custom_fps = crate::common::FORK_DEFAULT_FPS;
+            *self.custom_fps.lock().unwrap() = Some(crate::common::FORK_DEFAULT_FPS as _);
+        }
         let view_only = self.get_toggle_option("view-only");
         if view_only {
             msg.disable_keyboard = BoolOption::Yes.into();
@@ -3733,7 +3738,7 @@ impl LoginConfigHandler {
                 get_version_number(&pi.version),
                 &pi.platform,
             ) {
-                config.keyboard_mode = KeyboardMode::Map.to_string();
+                config.keyboard_mode = KeyboardMode::Translate.to_string();
             } else {
                 config.keyboard_mode = KeyboardMode::Legacy.to_string();
             }

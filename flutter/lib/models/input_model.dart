@@ -1453,6 +1453,8 @@ class InputModel {
     await _sendMouseUnchecked(type, button);
   }
 
+  bool get pointerInsideImage => _pointerInsideImage;
+
   void enterOrLeave(bool enter) {
     toReleaseKeys.release(handleKeyEvent);
     toReleaseRawKeys.release(handleRawKeyEvent);

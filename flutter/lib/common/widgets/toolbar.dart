@@ -710,8 +710,10 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
     ));
   }
   // record
-  if (!(isDesktop || isWeb) &&
-      bind.mainGetLocalOption(key: kOptionHideRecordingButton) != 'Y' &&
+  // On desktop the menu entry replaces the hidden toolbar button.
+  final hideRecordingButton =
+      bind.mainGetLocalOption(key: kOptionHideRecordingButton) == 'Y';
+  if ((isDesktop ? hideRecordingButton : !isWeb && !hideRecordingButton) &&
       (ffi.recordingModel.start || (perms["recording"] != false))) {
     v.add(TTextMenu(
         child: Row(

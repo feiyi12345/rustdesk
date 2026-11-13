@@ -23,6 +23,7 @@ import '../../models/platform_model.dart';
 import '../../common/shared_state.dart';
 import './popup_menu.dart';
 import './kb_layout_type_chooser.dart';
+import './remote_text_input_dialog.dart';
 import 'package:flutter_hbb/utils/scale.dart';
 import 'package:flutter_hbb/common/widgets/custom_scale_base.dart';
 
@@ -2634,6 +2635,14 @@ class _KeyboardMenu extends StatelessWidget {
         color: _ToolbarTheme.blueColor,
         hoverColor: _ToolbarTheme.hoverBlueColor,
         menuChildrenGetter: (_) => [
+              MenuButton(
+                child: Text(translate('Type text')),
+                onPressed: ffi.ffiModel.viewOnly
+                    ? null
+                    : () => remoteTextInputDialog(ffi),
+                ffi: ffi,
+              ),
+              Divider(),
               keyboardMode(),
               localKeyboardType(),
               inputSource(),
