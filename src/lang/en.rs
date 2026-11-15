@@ -288,5 +288,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("shortcut-already-bound-to", "Already bound to"),
         ("shortcut-mobile-physical-keyboard-tip", "Recording requires a physical keyboard. Soft keyboards are not supported."),
         ("shortcut-key-not-supported", "\"{}\" can't be used as a shortcut."),
+        ("type-text-tip", "Type with this computer's input method, then press Enter to send it to the remote computer."),
+        ("relay-connection-tip", "Connected through the relay server. It may be less smooth than a direct connection."),
     ].iter().cloned().collect();
 }

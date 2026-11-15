@@ -347,6 +347,10 @@ class FfiModel with ChangeNotifier {
         setConnectionType(peerId, evt['secure'] == 'true',
             evt['direct'] == 'true', evt['stream_type'] ?? '');
         resetRestartReconnectState();
+        if (isDesktop && evt['direct'] != 'true') {
+          showToast(translate('relay-connection-tip'),
+              timeout: const Duration(seconds: 5));
+        }
       } else if (name == 'switch_display') {
         // switch display is kept for backward compatibility
         handleSwitchDisplay(evt, sessionId, peerId);

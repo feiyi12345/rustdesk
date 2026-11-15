@@ -5,6 +5,8 @@ import 'dart:math';
 import 'package:extended_text/extended_text.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart';
 import 'package:flutter_hbb/desktop/widgets/dragable_divider.dart';
+import 'package:flutter_hbb/desktop/local_file_stage.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/gestures.dart';
@@ -760,6 +762,19 @@ class _FileManagerViewState extends State<FileManagerView> {
                       hoverColor: Theme.of(context).hoverColor,
                     ),
                     MenuButton(
+                      tooltip: translate('Desktop'),
+                      padding: EdgeInsets.only(right: 3),
+                      onPressed: () {
+                        selectedItems.clear();
+                        controller.goToDesktopDirectory();
+                      },
+                      child: Icon(Icons.desktop_windows_outlined,
+                          color: Theme.of(context).tabBarTheme.labelColor),
+                      color: Theme.of(context).cardColor,
+                      hoverColor: Theme.of(context).hoverColor,
+                    ),
+                    if (isLocal && !isWeb) _pickButton(),
+                    MenuButton(
                       tooltip: translate('Create Folder'),
                       onPressed: () {
                         final name = TextEditingController();
@@ -939,16 +954,11 @@ class _FileManagerViewState extends State<FileManagerView> {
                       ),
                     ),
                     onPressed: SelectedItems.valid(selectedItems.items)
-                        ? () {
-                            final otherSideData =
-                                controller.getOtherSideDirectoryData();
-                            controller.sendFiles(selectedItems, otherSideData);
-                            selectedItems.clear();
-                          }
+                        ? _sendSelected
                         : null,
                     icon: isLocal
                         ? Text(
-                            translate('Send'),
+                            _withCount(translate('Send')),
                             textAlign: TextAlign.right,
                             style: TextStyle(
                               color: selectedItems.items.isEmpty
@@ -986,7 +996,8 @@ class _FileManagerViewState extends State<FileManagerView> {
                                 : Colors.white),
                           )
                         : Text(
-                            translate(isWeb ? 'Download' : 'Receive'),
+                            _withCount(
+                                translate(isWeb ? 'Download' : 'Receive')),
                             style: TextStyle(
                               color: selectedItems.items.isEmpty
                                   ? Theme.of(context).brightness ==
@@ -1000,6 +1011,38 @@ class _FileManagerViewState extends State<FileManagerView> {
             ],
           ).marginOnly(top: 8.0)
         ],
+      ),
+    );
+  }
+
+  Widget _pickButton() {
+    var menuPos = RelativeRect.fill;
+    return Listener(
+      onPointerDown: (e) {
+        final x = e.position.dx;
+        final y = e.position.dy;
+        menuPos = RelativeRect.fromLTRB(x, y, x, y);
+      },
+      child: MenuButton(
+        tooltip: translate('Choose files'),
+        padding: EdgeInsets.only(right: 3),
+        onPressed: () async {
+          final folder = await showMenu<bool>(
+            context: context,
+            position: menuPos,
+            items: [
+              PopupMenuItem<bool>(
+                  value: false, child: Text(translate('Choose files'))),
+              PopupMenuItem<bool>(
+                  value: true, child: Text(translate('Choose folder'))),
+            ],
+          );
+          if (folder != null) await _pickAndSend(folder: folder);
+        },
+        child: Icon(Icons.upload_file_outlined,
+            color: Theme.of(context).tabBarTheme.labelColor),
+        color: Theme.of(context).cardColor,
+        hoverColor: Theme.of(context).hoverColor,
       ),
     );
   }
@@ -1139,8 +1182,13 @@ class _FileManagerViewState extends State<FileManagerView> {
             final items = selectedItems;
             // handle double click
             if (_checkDoubleClick(entry)) {
-              controller.openDirectory(entry.path);
               items.clear();
+              if (entry.isFile) {
+                items.add(entry);
+                _sendSelected();
+              } else {
+                controller.openDirectory(entry.path);
+              }
               return;
             }
             _onSelectedChanged(items, filteredEntries, entry, isLocal);
@@ -1230,6 +1278,7 @@ class _FileManagerViewState extends State<FileManagerView> {
                                       waitDuration: Duration(milliseconds: 500),
                                       message: entry.name,
                                       child: Row(children: [
+                                        _buildRowCheckbox(entry),
                                         entry.isDrive
                                             ? Image(
                                                     image: iconHardDrive,
@@ -1349,6 +1398,64 @@ class _FileManagerViewState extends State<FileManagerView> {
         );
       }),
     );
+  }
+
+  String _withCount(String label) {
+    final count = selectedItems.items.length;
+    return count == 0 ? label : '$label ($count)';
+  }
+
+  void _sendSelected() {
+    if (!SelectedItems.valid(selectedItems.items)) return;
+    controller.sendFiles(selectedItems, controller.getOtherSideDirectoryData());
+    selectedItems.clear();
+  }
+
+  Widget _buildRowCheckbox(Entry entry) {
+    if (entry.isDrive) return const SizedBox(width: 22);
+    final checked = selectedItems.items.contains(entry);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        if (checked) {
+          selectedItems.remove(entry);
+        } else {
+          selectedItems.add(entry);
+        }
+        setState(() {});
+      },
+      child: Icon(
+        checked ? Icons.check_box : Icons.check_box_outline_blank,
+        size: 18,
+        color: checked ? Colors.white : MyTheme.darkGray,
+      ).paddingOnly(right: 4),
+    );
+  }
+
+  Future<void> _pickAndSend({required bool folder}) async {
+    final List<String> paths;
+    if (folder) {
+      final path = await FilePicker.platform.getDirectoryPath();
+      paths = path == null ? [] : [path];
+    } else {
+      final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+      paths = result?.files
+              .map((f) => f.path)
+              .whereType<String>()
+              .toList(growable: false) ??
+          [];
+    }
+    if (paths.isEmpty) return;
+    final items = SelectedItems(isLocal: true);
+    for (final path in paths) {
+      final staged = stageLocalPath(path);
+      items.add(Entry()
+        ..path = staged.path
+        ..name = staged.name
+        ..entryType = staged.entryType
+        ..size = staged.size);
+    }
+    controller.sendFiles(items, controller.getOtherSideDirectoryData());
   }
 
   onSearchText(String searchText, bool isLocal) {

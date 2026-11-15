@@ -437,7 +437,7 @@ class FileController {
         options.value.home,
       };
       for (final dir in dirs) {
-        if (await _openDirectoryPath(dir, isBack: true)) {
+        if (await _openDirectoryPath(dir, isBack: true, showError: false)) {
           return true;
         }
       }
@@ -498,7 +498,8 @@ class FileController {
     return await _openDirectoryPath(path, isBack: isBack);
   }
 
-  Future<bool> _openDirectoryPath(String path, {bool isBack = false}) async {
+  Future<bool> _openDirectoryPath(String path,
+      {bool isBack = false, bool showError = true}) async {
     if (!_isPathAllowed(path)) {
       return false;
     }
@@ -542,7 +543,7 @@ class FileController {
       }
       debugPrint("Failed to openDirectory $path: $e");
       final dm = dialogManager;
-      if (dm != null) {
+      if (dm != null && showError) {
         msgBox(sessionId, 'custom-error-nook-nocancel-hasclose',
             translate("Error"), e.toString(), '', dm);
       }
@@ -561,6 +562,38 @@ class FileController {
     }
     homePath = "";
     openDirectory(homePath);
+  }
+
+  /// Opens the user's desktop, including the OneDrive-redirected one on Windows.
+  Future<void> goToDesktopDirectory() async {
+    var home = homePath;
+    if (home.isEmpty && !isLocal) {
+      try {
+        final fd = await fileFetcher.fetchDirectory(
+            "", isLocal, options.value.showHidden);
+        home = fd.path;
+        if (home.isNotEmpty) homePath = home;
+      } catch (e) {
+        debugPrint("Failed to read remote home: $e");
+      }
+    }
+    if (home.isEmpty) {
+      goToHomeDirectory();
+      return;
+    }
+    final isWindows = options.value.isWindows;
+    final candidates = [
+      PathUtil.join(home, "Desktop", isWindows),
+      PathUtil.join(
+          PathUtil.join(home, "OneDrive", isWindows), "Desktop", isWindows),
+      PathUtil.join(home, "桌面", isWindows),
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      final isLast = i == candidates.length - 1;
+      if (await _openDirectoryPath(candidates[i], showError: isLast)) {
+        return;
+      }
+    }
   }
 
   void goBack() {
@@ -1616,6 +1649,9 @@ class FileFetcher {
       if (isLocal) {
         final res = await bind.sessionReadLocalDirSync(
             sessionId: sessionId, path: path, showHidden: showHidden);
+        if (res.isEmpty) {
+          throw "${translate("Failed to open directory")}: $path";
+        }
         final fd = FileDirectory.fromJson(jsonDecode(res));
         return fd;
       } else {
