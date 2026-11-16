@@ -485,6 +485,7 @@ class _ConnectionPageState extends State<ConnectionPage>
               ],
             ),
             ),
+            if (!kMinimalUi)
             Row(
               children: [
                 Expanded(child: _buildSteps(context)),

@@ -632,6 +632,7 @@ abstract class BasePeerCard extends StatelessWidget {
 
   @protected
   MenuEntryBase<String> _viewCameraAction(BuildContext context) {
+    if (kMinimalUi) return _OmittedMenuEntry();
     return _connectCommonAction(
       context,
       translate('View camera'),
@@ -641,6 +642,7 @@ abstract class BasePeerCard extends StatelessWidget {
 
   @protected
   MenuEntryBase<String> _terminalAction(BuildContext context) {
+    if (kMinimalUi) return _OmittedMenuEntry();
     return _connectCommonAction(
       context,
       '${translate('Terminal')} (beta)',
@@ -650,6 +652,7 @@ abstract class BasePeerCard extends StatelessWidget {
 
   @protected
   MenuEntryBase<String> _terminalRunAsAdminAction(BuildContext context) {
+    if (kMinimalUi) return _OmittedMenuEntry();
     return _connectCommonAction(
       context,
       '${translate('Terminal (Run as administrator)')} (beta)',
@@ -659,6 +662,7 @@ abstract class BasePeerCard extends StatelessWidget {
 
   @protected
   MenuEntryBase<String> _tcpTunnelingAction(BuildContext context) {
+    if (kMinimalUi) return _OmittedMenuEntry();
     return _connectCommonAction(
       context,
       translate('TCP tunneling'),
@@ -668,6 +672,7 @@ abstract class BasePeerCard extends StatelessWidget {
 
   @protected
   MenuEntryBase<String> _rdpAction(BuildContext context, String id) {
+    if (kMinimalUi) return _OmittedMenuEntry();
     return MenuEntryButton<String>(
       childBuilder: (TextStyle? style) => Container(
           alignment: AlignmentDirectional.center,
@@ -706,6 +711,7 @@ abstract class BasePeerCard extends StatelessWidget {
 
   @protected
   MenuEntryBase<String> _wolAction(String id) {
+    if (kMinimalUi) return _OmittedMenuEntry();
     return MenuEntryButton<String>(
       childBuilder: (TextStyle? style) => Text(
         translate('WOL'),
@@ -722,6 +728,7 @@ abstract class BasePeerCard extends StatelessWidget {
   /// Only available on Windows.
   @protected
   MenuEntryBase<String> _createShortCutAction(String id) {
+    if (kMinimalUi) return _OmittedMenuEntry();
     return MenuEntryButton<String>(
       childBuilder: (TextStyle? style) => Text(
         translate('Create desktop shortcut'),
@@ -772,6 +779,7 @@ abstract class BasePeerCard extends StatelessWidget {
 
   @protected
   Future<MenuEntryBase<String>> _forceAlwaysRelayAction(String id) async {
+    if (kMinimalUi) return _OmittedMenuEntry();
     return MenuEntrySwitch<String>(
       switchType: SwitchType.scheckbox,
       text: translate('Always connect via relay'),
@@ -1616,4 +1624,12 @@ void connectInPeerTab(BuildContext context, Peer peer, PeerTabIndex tab,
       isViewCamera: isViewCamera,
       isTcpTunneling: isTcpTunneling,
       isRDP: isRDP);
+}
+
+/// Stands in for an entry the minimal UI leaves out; it renders nothing.
+class _OmittedMenuEntry extends MenuEntryBase<String> {
+  @override
+  List<mod_menu.PopupMenuEntry<String>> build(
+          BuildContext context, MenuConfig conf) =>
+      [];
 }
