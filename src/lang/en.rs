@@ -290,5 +290,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("shortcut-key-not-supported", "\"{}\" can't be used as a shortcut."),
         ("type-text-tip", "Type with this computer's input method, then press Enter to send it to the remote computer."),
         ("relay-connection-tip", "Connected through the relay server. It may be less smooth than a direct connection."),
+        ("no-update-found-tip", "No newer version found."),
     ].iter().cloned().collect();
 }

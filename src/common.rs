@@ -1011,7 +1011,8 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
 }
 
 pub fn check_software_update() {
-    if is_custom_client() {
+    // The fork's own build is "custom" only because it is renamed; it has its own feed.
+    if is_custom_client() && get_app_name() != FORK_PACKAGE_NAME {
         return;
     }
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);

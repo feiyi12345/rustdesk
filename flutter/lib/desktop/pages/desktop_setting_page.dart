@@ -20,6 +20,7 @@ import 'package:flutter_hbb/models/printer_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/shortcut_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -2593,6 +2594,30 @@ class _About extends StatefulWidget {
 }
 
 class _AboutState extends State<_About> {
+  bool _checkingUpdate = false;
+
+  /// The check result arrives as an event; give it a few seconds, then either
+  /// start the verified download or say nothing newer was found.
+  Future<void> _checkForUpdate() async {
+    setState(() => _checkingUpdate = true);
+    await bind.mainGetSoftwareUpdateUrl();
+    final deadline = DateTime.now().add(const Duration(seconds: 8));
+    while (stateGlobal.updateUrl.value.isEmpty &&
+        DateTime.now().isBefore(deadline)) {
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+    if (!mounted) return;
+    setState(() => _checkingUpdate = false);
+    final url = stateGlobal.updateUrl.value;
+    if (url.isEmpty) {
+      showToast(translate('no-update-found-tip'));
+    } else if (bind.mainIsInstalled()) {
+      handleUpdate(url);
+    } else {
+      await launchUrl(Uri.parse(updateInstallerUrl(url)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return futureBuilder(future: () async {
@@ -2628,6 +2653,16 @@ class _AboutState extends State<_About> {
               SelectionArea(
                   child: Text('${translate('Version')}: $version')
                       .marginSymmetric(vertical: 4.0)),
+              if (kForkUpdateFeed && isWindows)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton(
+                    onPressed: _checkingUpdate ? null : _checkForUpdate,
+                    child: Text(_checkingUpdate
+                        ? '${translate('Check for updates')} ...'
+                        : translate('Check for updates')),
+                  ),
+                ).marginSymmetric(vertical: 4.0),
               SelectionArea(
                   child: Text('${translate('Build Date')}: $buildDate')
                       .marginSymmetric(vertical: 4.0)),

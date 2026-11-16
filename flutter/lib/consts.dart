@@ -721,3 +721,7 @@ extension WindowsTargetExt on int {
 }
 
 const kCheckSoftwareUpdateFinish = 'check_software_update_finish';
+
+/// The fork counts as a custom client because it is renamed, yet it has its
+/// own update feed; the Rust side still skips real custom clients.
+const bool kForkUpdateFeed = true;

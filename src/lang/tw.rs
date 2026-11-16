@@ -828,5 +828,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("type-text-tip", "使用本機輸入法（可打中文）輸入，按 Enter 傳送到遠端電腦"),
         ("relay-connection-tip", "目前經由中繼伺服器連線，畫面和傳輸可能不如直連流暢"),
         ("Advanced settings", "進階設定"),
+        ("Check for updates", "檢查更新"),
+        ("no-update-found-tip", "未發現新版本"),
     ].iter().cloned().collect();
 }

@@ -828,6 +828,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("type-text-tip", ""),
         ("relay-connection-tip", ""),
         ("Advanced settings", ""),
+        ("Check for updates", ""),
+        ("no-update-found-tip", ""),
     ].iter().cloned().collect();
 }
 
