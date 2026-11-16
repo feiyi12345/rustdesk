@@ -418,12 +418,23 @@ class _GeneralState extends State<_General> {
         if (!isWeb) service(),
         theme(),
         _Card(title: 'Language', children: [language()]),
+        if (kMinimalUi)
+          _AdvancedFold(children: [
+            if (!isWeb) hwcodec(),
+            if (!isWeb) audio(context),
+            if (!isWeb) record(context),
+            if (!isWeb) WaylandCard(),
+            other(),
+            if (!bind.isIncomingOnly()) keyboardShortcuts(),
+          ]),
+        if (!kMinimalUi) ...[
         if (!isWeb) hwcodec(),
         if (!isWeb) audio(context),
         if (!isWeb) record(context),
         if (!isWeb) WaylandCard(),
         other(),
         if (!bind.isIncomingOnly()) keyboardShortcuts(),
+        ],
       ],
     ).marginOnly(bottom: _kListViewBottomMargin);
   }
@@ -1039,10 +1050,19 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
               child: Column(children: [
                 permissions(context),
                 password(context),
+                if (kMinimalUi)
+                  _AdvancedFold(children: [
+                    _Card(title: '2FA', children: [tfa()]),
+                    if (!isChangeIdDisabled())
+                      _Card(title: 'ID', children: [changeId()]),
+                    more(context),
+                  ]),
+                if (!kMinimalUi) ...[
                 _Card(title: '2FA', children: [tfa()]),
                 if (!isChangeIdDisabled())
                   _Card(title: 'ID', children: [changeId()]),
                 more(context),
+                ],
               ]),
             ),
           ],
@@ -2001,12 +2021,24 @@ class _DisplayState extends State<_Display> {
     final scrollController = ScrollController();
     return ListView(controller: scrollController, children: [
       viewStyle(context),
+      if (kMinimalUi) ...[
+        imageQuality(context),
+        codec(context),
+        _AdvancedFold(children: [
+          scrollStyle(context),
+          if (isDesktop) trackpadSpeed(context),
+          if (!isWeb) privacyModeImpl(context),
+          other(context),
+        ]),
+      ],
+      if (!kMinimalUi) ...[
       scrollStyle(context),
       imageQuality(context),
       codec(context),
       if (isDesktop) trackpadSpeed(context),
       if (!isWeb) privacyModeImpl(context),
       other(context),
+      ],
     ]).marginOnly(bottom: _kListViewBottomMargin);
   }
 
@@ -2606,6 +2638,7 @@ class _AboutState extends State<_About> {
               SelectionArea(
                   child: Text('${translate('ID')}: $myId')
                       .marginSymmetric(vertical: 4.0)),
+              if (!kMinimalUi) ...[
               InkWell(
                   onTap: () {
                     launchUrlString('https://rustdesk.com/privacy.html');
@@ -2622,6 +2655,7 @@ class _AboutState extends State<_About> {
                     translate('Website'),
                     style: linkStyle,
                   ).marginSymmetric(vertical: 4.0)),
+              ],
               const Text(
                 '无限远程 基于 RustDesk 修改并再分发，遵循 GNU AGPL-3.0。RustDesk © Purslane Tech Pte. Ltd.',
               ).marginSymmetric(vertical: 4.0),
@@ -2669,6 +2703,39 @@ class _AboutState extends State<_About> {
 //#region components
 
 // ignore: non_constant_identifier_names
+/// Collapsed group for the cards the minimal UI keeps out of the way.
+class _AdvancedFold extends StatelessWidget {
+  final List<Widget> children;
+  const _AdvancedFold({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Flexible(
+          child: SizedBox(
+            width: _kCardFixedWidth + _kCardLeftMargin,
+            child: Theme(
+              data: Theme.of(context)
+                  .copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                title: Text(translate('Advanced settings'),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600)),
+                tilePadding: const EdgeInsets.only(
+                    left: _kCardLeftMargin + _kContentHMargin,
+                    right: _kContentHMargin),
+                childrenPadding: EdgeInsets.zero,
+                children: children,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ).marginOnly(top: 15);
+  }
+}
+
 Widget _Card(
     {required String title,
     required List<Widget> children,

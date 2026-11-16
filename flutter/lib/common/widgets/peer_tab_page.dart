@@ -587,6 +587,7 @@ class _PeerTabPageState extends State<PeerTabPage>
           index: PeerTabIndex.ab, loading: gFFI.abModel.currentAbLoading),
       _createRefresh(
           index: PeerTabIndex.group, loading: gFFI.groupModel.groupLoading),
+      if (!kMinimalUi) ...[
       Offstage(
         offstage: model.currentTabCachedPeers.isEmpty,
         child: _createMultiSelection(),
@@ -596,6 +597,7 @@ class _PeerTabPageState extends State<PeerTabPage>
         offstage: model.currentTab == PeerTabIndex.recent.index,
         child: PeerSortDropdown(),
       ),
+      ],
       Offstage(
         offstage: model.currentTab != PeerTabIndex.ab.index,
         child: _toggleTags(),

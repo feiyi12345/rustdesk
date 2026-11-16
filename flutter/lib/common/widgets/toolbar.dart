@@ -500,6 +500,7 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
   }
   // paste
   if (isDefaultConn &&
+      !(kMinimalUi && isDesktop) &&
       pi.platform != kPeerPlatformAndroid &&
       perms['keyboard'] != false) {
     v.add(TTextMenu(
@@ -592,6 +593,8 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
           child: Text(translate('Transfer file')),
           onPressed: () => connectWithToken(isFileTransfer: true)),
     );
+  }
+  if (isDefaultConn && isDesktop && !kMinimalUi) {
     v.add(
       TTextMenu(
           child: Text(translate('View camera')),
@@ -691,6 +694,7 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
   // switchSides
   if (isDefaultConn &&
       isDesktop &&
+      !kMinimalUi &&
       ffiModel.keyboard &&
       pi.platform != kPeerPlatformAndroid &&
       versionCmp(pi.version, '1.2.0') >= 0 &&
@@ -738,7 +742,9 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
   // to-do:
   // 1. Web desktop
   // 2. Mobile, copy the image to the clipboard
-  if ((isDefaultConn || ffi.connType == ConnType.viewCamera) && isDesktop) {
+  if ((isDefaultConn || ffi.connType == ConnType.viewCamera) &&
+      isDesktop &&
+      !kMinimalUi) {
     final isScreenshotSupported = bind.sessionGetCommonSync(
         sessionId: sessionId, key: 'is_screenshot_supported', param: '');
     if ('true' == isScreenshotSupported) {
