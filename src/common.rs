@@ -2491,12 +2491,12 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
 
 /// Built-in rendezvous/relay host for this fork. `hbb_common` is an upstream
 /// submodule this fork cannot push to, so the defaults are applied from here.
-pub const BUILTIN_RENDEZVOUS_SERVER: &str = "193.134.210.76";
+pub const BUILTIN_RENDEZVOUS_SERVER: &str = "187.53.84.225";
 /// Public key of `BUILTIN_RENDEZVOUS_SERVER` (`id_ed25519.pub` of hbbs/hbbr).
 pub const BUILTIN_RS_PUB_KEY: &str = "EPRIuY4FHOsU7HGeArgO+wHEETEl9q97nQqdPltXiFs=";
 
 /// Update feed for this fork; `res/publish_update.js` publishes to it.
-pub const UPDATE_FEED_BASE: &str = "https://193-134-210-76.sslip.io:8443/updates/wuxian";
+pub const UPDATE_FEED_BASE: &str = "https://187-53-84-225.sslip.io:8443/updates/wuxian";
 
 fn apply_fork_defaults() {
     {

@@ -16,9 +16,9 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const FEED_BASE = 'https://193-134-210-76.sslip.io:8443/updates/wuxian';
-const SSH_HOST = 'root@193.134.210.76';
-const SSH_PORT = '10303';
+const FEED_BASE = 'https://187-53-84-225.sslip.io:8443/updates/wuxian';
+const SSH_HOST = 'root@187.53.84.225';
+const SSH_PORT = '22';
 const REMOTE_DIR = '/opt/proxyguard-license/data/updates/wuxian';
 const KEY_ID = 'wuxian-2026-ed25519';
 // Must match UPDATE_METADATA_SIGNATURE_CONTEXT in src/update_metadata.rs.
